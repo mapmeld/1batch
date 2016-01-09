@@ -1,0 +1,19 @@
+.row {
+  margin-bottom: 18px;
+}
+
+.col-sm-12.col-md-6 {
+  margin-bottom: 18px;
+}
+
+.pcon {
+  border: 3px solid #000;
+  background: #fff;
+  padding: 6px;
+  width: 100%;
+}
+
+.pcon img {
+  background: #444;
+  width: 100%;
+}

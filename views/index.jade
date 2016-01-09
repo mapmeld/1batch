@@ -4,6 +4,7 @@ html
     meta(charset="utf-8")
     title 1batch
     link(rel="stylesheet", type="text/css", href="lib/bootstrap.min.css")
+    link(rel="stylesheet", type="text/css", href="1batch.css")
   body
     .container
       .row
@@ -11,25 +12,47 @@ html
           h1 1batch is an app for sharing 8 photos.
       .row
         .col-sm-12.col-md-6
-          h3 Publish one batch of photos
-          p 📷 Take as much time as you need to pick the perfect set, then publish them all at once.
+          h3 Publish one album
+          p 📷 Take your time to pick the perfect set of 8 photos, then publish all at once.
           p 🌟 Follow your friends and help them pick their top photos.
         .col-sm-12.col-md-6
           h3 Keep your photos for 6 months
-          p 📱 Post comments and updates (your friend finished their project! Bill got engaged!).
+          p 📱 Post comments and updates: (We got engaged! Your friend finished a project!)
           p ⏰ Don't add any new photos for 6 months.
           p 💔 You can always hide or delete a photo if it's no longer relevant.
-      .row
-        .col-sm-12.col-md-4
-        .col-sm-12.col-md-4
-        .col-sm-12.col-md-4
+      .row.homephotos
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home2.jpg")
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home2.jpg")
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home3.jpg")
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home4.jpg")
       .row
         .col-sm-12
-          h2 what can you say in 8 photos?
+          h2 What do you say in 8 photos?
+      .row.homephotos
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home1.jpg")
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home2.jpg")
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home3.jpg")
+        .col-sm-6.col-lg-3
+          .pcon
+            img(src="images/home4.jpg")
       .row
         .col-sm-12
-          h3 Open Source Software
-          h4 💻 1batch is open source
+          hr
+          h4 💻 1batch's code is free and open source
           p That means coders can add on to it, or make their own apps. And anyone can code, so that new app might be yours!
           p
             span Check out our&nbsp;
@@ -37,3 +60,5 @@ html
             span &nbsp;and&nbsp;
             a(href="#") Getting Started
             span &nbsp;page.
+          hr
+          small &copy; 2016 Nick Doiron

@@ -1,0 +1,33 @@
+doctype
+html
+  head
+    meta(charset="utf-8")
+    title 1batch
+    link(rel="stylesheet", type="text/css", href="/lib/bootstrap.min.css")
+    link(rel="stylesheet", type="text/css", href="/1batch.css")
+  body
+    .container
+      .row
+        .col-sm-12
+          h1
+            span 1batch&nbsp;
+            small is an app for sharing 8 photos.
+      .row
+        .col-sm-12.col-md-6
+          h1= user.name
+          h4 posted #{user.posted.toISOString()}
+      .row.homephotos
+        for index in [0, 1, 2, 3]
+          .col-sm-6.col-lg-3
+            a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
+              img(src=user.images[index])
+      .row.homephotos
+        for index in [4, 5, 6, 7]
+          .col-sm-6.col-lg-3
+            a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
+              img(src=user.images[index])
+
+      .row
+        .col-sm-12
+          hr
+          small &copy; 2016 Nick Doiron

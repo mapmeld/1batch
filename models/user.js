@@ -6,7 +6,9 @@ var userSchema = mongoose.Schema({
   name: String,
   id: String,
   images: [String],
-  posted: Date
+  imageids: [String],
+  posted: Date,
+  test: Boolean
 });
 
 module.exports = mongoose.model('User', userSchema);

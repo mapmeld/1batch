@@ -1,0 +1,43 @@
+doctype
+html
+  head
+    meta(charset="utf-8")
+    title 1batch
+    link(rel="stylesheet", type="text/css", href="/lib/bootstrap.min.css")
+    link(rel="stylesheet", type="text/css", href="/1batch.css")
+  body
+    .container
+      .row
+        .col-sm-12
+          h1
+            span 1batch&nbsp;
+            small is an app for sharing 8 photos.
+      .row
+        .col-sm-12.col-md-6
+          h1= user.name
+          h4 posted #{user.posted.toISOString()}
+
+
+      .row
+        .col-sm-12
+          hr
+          img.bigimage(src=image.src)
+
+      if presentUser
+        .row
+          .col-sm-12
+            form(action="/comment", method="POST")
+              textarea(name="text")
+              input(type="submit", value="POST")
+
+      .row
+        .col-sm-12.comments
+
+      .row
+        .col-sm-12
+          hr
+          small &copy; 2016 Nick Doiron
+
+    script(type="text/javascript") var comments = !{JSON.stringify(image.comments)};
+    script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
+    script(type="text/javascript", src="/comments.js")

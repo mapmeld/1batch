@@ -11,9 +11,25 @@
   background: #fff;
   padding: 6px;
   width: 100%;
+  cursor: pointer;
+  display: block;
 }
 
 .pcon img {
   background: #444;
   width: 100%;
+}
+
+.pcon:hover, .pcon:active {
+  background: #ccf;
+}
+
+.bigimage {
+
+}
+
+.comment {
+  padding: 12px;
+  background: #fff;
+  box-shadow: 2px 2px 2px #444;
 }

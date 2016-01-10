@@ -12,6 +12,7 @@ var multer = require('multer');
 var ms3 = require('multer-s3');
 
 var User = require('./models/user.js');
+var Image = require('./models/image.js');
 
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
 
@@ -48,8 +49,51 @@ if (process.env.S3_BUCKET && process.env.AWS_SECRET_KEY && process.env.AWS_ACCES
   });
 }
 
+function printError(err, res) {
+  res.json({ status: 'error', error: err });
+}
+
 app.get('/', function (req, res) {
   res.render('index');
+});
+
+app.get('/:username/photo/:photoid', function (req, res) {
+  User.findOne({ name: req.params.username }, function (err, user) {
+    if (err) {
+      return printError(err, res);
+    }
+    Image.findOne({ _id: req.params.photoid }, function (err, image) {
+      if (err) {
+        return printError(err, res);
+      }
+      res.render('image', {
+        user: user,
+        image: image,
+        presentUser: (req.user || null)
+      });
+    });
+  });
+});
+
+app.get('/profile/:username', function (req, res) {
+  User.findOne({ name: req.params.username }, function (err, user) {
+    if (err) {
+      return printError(err, res);
+    }
+    res.render('profile', {
+      user: user
+    });
+  });
+});
+
+app.get('/profile', function (req, res) {
+  if (req.user == 'object' && req.user) {
+    res.render('profile', {
+      user: req.user
+    });
+  } else {
+    return printError('no user logged in', res);
+  }
 });
 
 app.get('/auth/google',

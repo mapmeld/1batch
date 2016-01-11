@@ -37,9 +37,10 @@ html
         if forUser && user._id == forUser._id
           .row
             .col-sm-12
-              form(action="/pupload", method="POST")
+              form(action="/testupload", method="POST")
                 label Upload a photo that you might use
                 input(type="file")
+                input(type="submit", value="Test Upload")
           .row
             .col-sm-12
               p Draft images

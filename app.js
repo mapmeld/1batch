@@ -132,7 +132,7 @@ app.get('/profile/:username', function (req, res) {
     }
     res.render('profile', {
       user: user,
-      forUser: req.user
+      forUser: (req.user || null)
     });
   });
 });
@@ -146,6 +146,28 @@ app.get('/profile', ensureLogin(), function (req, res) {
 
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['email'] }));
+
+
+app.post('/testupload', ensureLogin(), function (req, res) {
+  var i = new Image();
+  i.user_id = req.user.name;
+  i.src = '/images/home1.jpg';
+  i.hidden = true;
+  i.test = false;
+  i.save(function (err) {
+    if (err) {
+      return printError(err, res);
+    }
+    req.user.images.push(i.src);
+    req.user.imageids.push(i._id);
+    req.user.save(function (err) {
+      if (err) {
+        return printError(err, res);
+      }
+      res.redirect('/profile');
+    });
+  });
+});
 
 app.get('/upload',
   passport.authenticate('google', { failureRedirect: '/' }),

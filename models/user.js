@@ -4,6 +4,7 @@ var mongoose = require('mongoose');
 
 var userSchema = mongoose.Schema({
   name: String,
+  localpass: String,
   id: String,
   images: [String],
   imageids: [String],
@@ -11,4 +12,4 @@ var userSchema = mongoose.Schema({
   test: Boolean
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('OBUser', userSchema);

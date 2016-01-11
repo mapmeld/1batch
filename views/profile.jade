@@ -15,17 +15,36 @@ html
       .row
         .col-sm-12.col-md-6
           h1= user.name
-          h4 posted #{user.posted.toISOString()}
-      .row.homephotos
-        for index in [0, 1, 2, 3]
-          .col-sm-6.col-lg-3
-            a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
-              img(src=user.images[index])
-      .row.homephotos
-        for index in [4, 5, 6, 7]
-          .col-sm-6.col-lg-3
-            a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
-              img(src=user.images[index])
+          if user.posted
+            h4 posted #{user.posted.toISOString()}
+          else
+            if user._id == forUser._id
+              h4 You haven't posted yet!
+            else
+              h4 hasn't posted yet!
+      if user.posted
+        .row.profilephotos
+          for index in [0, 1, 2, 3]
+            .col-sm-6.col-lg-3
+              a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
+                img(src=user.images[index])
+        .row.profilephotos
+          for index in [4, 5, 6, 7]
+            .col-sm-6.col-lg-3
+              a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
+                img(src=user.images[index])
+      else
+        if user._id == forUser._id
+          .row
+            .col-sm-12
+              form(action="/pupload", method="POST")
+                label Upload a photo that you might use
+                input(type="file")
+          .row
+            .col-sm-12
+              p Draft images
+              for image in user.images
+                img(src=image)
 
       .row
         .col-sm-12

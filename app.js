@@ -7,10 +7,11 @@ var session = require('express-session');
 var compression = require('compression');
 var mongoose = require('mongoose');
 var passport = require('passport');
+var Strategy = require('passport-local').Strategy;
+var ensureLogin = require('connect-ensure-login').ensureLoggedIn;
 var GoogleStrategy = require('passport-google-oauth2').Strategy;
 var multer = require('multer');
 var ms3 = require('multer-s3');
-
 var User = require('./models/user.js');
 var Image = require('./models/image.js');
 
@@ -25,7 +26,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(compression());
 app.use(cookieParser());
-app.use(session({ secret: process.env.GOOGLE_SESSION || 'fj23f90jfoijfl2mfp293i019eoijdoiqwj129' }));
+app.use(session({ secret: process.env.GOOGLE_SESSION || 'fj23f90jfoijfl2mfp293i019eoijdoiqwj129', resave: false, saveUninitialized: false }));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -57,6 +58,42 @@ app.get('/', function (req, res) {
   res.render('index');
 });
 
+app.get('/login', function (req, res) {
+  res.render('login', {
+    forUser: req.user
+  });
+});
+
+app.get('/bye', function (req, res) {
+  if (req.user) {
+    res.redirect('/logout');  
+  } else {
+    res.render('bye');
+  }
+});
+
+app.post('/register', function (req, res) {
+  var u = new User();
+  u.name = req.body.username;
+  u.localpass = req.body.password;
+  u.test = false;
+  u.save(function (err) {
+    if (err) {
+      return printError(err, res);
+    }
+    res.redirect('/login');
+  });
+});
+
+app.post('/login', passport.authenticate('local', { failureRedirect: '/login' }), function (req, res) {
+  res.redirect('/profile');
+});
+
+app.get('/logout', function (req, res) {
+  req.logout();
+  res.redirect('/bye');
+});
+
 app.get('/:username/photo/:photoid', function (req, res) {
   User.findOne({ name: req.params.username }, function (err, user) {
     if (err) {
@@ -69,7 +106,7 @@ app.get('/:username/photo/:photoid', function (req, res) {
       res.render('image', {
         user: user,
         image: image,
-        presentUser: (req.user || null)
+        forUser: (req.user || null)
       });
     });
   });
@@ -81,19 +118,17 @@ app.get('/profile/:username', function (req, res) {
       return printError(err, res);
     }
     res.render('profile', {
-      user: user
+      user: user,
+      forUser: req.user
     });
   });
 });
 
-app.get('/profile', function (req, res) {
-  if (req.user == 'object' && req.user) {
-    res.render('profile', {
-      user: req.user
-    });
-  } else {
-    return printError('no user logged in', res);
-  }
+app.get('/profile', ensureLogin(), function (req, res) {
+  res.render('profile', {
+    user: req.user,
+    forUser: req.user
+  });
 });
 
 app.get('/auth/google',
@@ -130,6 +165,28 @@ if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CONSUMER_SECRET) {
   passport.deserializeUser(function(id, done) {
     User.findOne({ id: id }, function(err, user) {
       done(err, user);
+    });
+  });
+} else {
+  passport.use(new Strategy(
+    function(username, password, cb) {
+      User.findOne({ name: username }, function(err, user) {
+        if (err) { return cb(err); }
+        if (!user) { return cb(null, false); }
+        if (user.localpass != password) { return cb(null, false); }
+        return cb(null, user);
+      });
+    })
+  );
+
+  passport.serializeUser(function(user, cb) {
+    cb(null, user._id);
+  });
+
+  passport.deserializeUser(function(id, cb) {
+    User.findById(id, function (err, user) {
+      if (err) { return cb(err); }
+      cb(null, user);
     });
   });
 }

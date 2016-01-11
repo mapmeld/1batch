@@ -1,3 +1,16 @@
+html, body {
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.navbar {
+  background: #fff;
+}
+
+.main {
+  margin-top: 60px;
+  margin-bottom: 60px;
+}
+
 .row {
   margin-bottom: 18px;
 }
@@ -11,7 +24,6 @@
   background: #fff;
   padding: 6px;
   width: 100%;
-  cursor: pointer;
   display: block;
 }
 
@@ -20,7 +32,11 @@
   width: 100%;
 }
 
-.pcon:hover, .pcon:active {
+.profilephotos .pcon {
+  cursor: pointer;
+}
+
+.profilephotos .pcon:hover, .profilephotos .pcon:active {
   background: #ccf;
 }
 
@@ -32,4 +48,24 @@
   padding: 12px;
   background: #fff;
   box-shadow: 2px 2px 2px #444;
+}
+
+.comment.op {
+  border: 1px solid blue;
+}
+
+form input, form label {
+  display: block;
+}
+
+a button {
+  color: #000;
+}
+
+a .btn-inverse {
+  color: #fff;
+}
+
+a button:hover {
+  text-transform: none;
 }

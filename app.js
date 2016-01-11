@@ -50,8 +50,12 @@ if (process.env.S3_BUCKET && process.env.AWS_SECRET_KEY && process.env.AWS_ACCES
   });
 }
 
-function printError(err, res) {
+function printError (err, res) {
   res.json({ status: 'error', error: err });
+}
+
+function print1984 (res) {
+  res.json({ status: 'missing', error: 'can\'t find that user or image' });
 }
 
 app.get('/', function (req, res) {
@@ -66,7 +70,7 @@ app.get('/login', function (req, res) {
 
 app.get('/bye', function (req, res) {
   if (req.user) {
-    res.redirect('/logout');  
+    res.redirect('/logout');
   } else {
     res.render('bye');
   }
@@ -99,9 +103,15 @@ app.get('/:username/photo/:photoid', function (req, res) {
     if (err) {
       return printError(err, res);
     }
-    Image.findOne({ _id: req.params.photoid }, function (err, image) {
+    if (!user) {
+      return print1984(res);
+    }
+    Image.findOne({ _id: req.params.photoid, hidden: false }, function (err, image) {
       if (err) {
         return printError(err, res);
+      }
+      if (!image) {
+        return print1984(res);
       }
       res.render('image', {
         user: user,
@@ -116,6 +126,9 @@ app.get('/profile/:username', function (req, res) {
   User.findOne({ name: req.params.username }, function (err, user) {
     if (err) {
       return printError(err, res);
+    }
+    if (!user) {
+      return print1984(res);
     }
     res.render('profile', {
       user: user,

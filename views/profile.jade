@@ -18,7 +18,7 @@ html
           if user.posted
             h4 posted #{user.posted.toISOString()}
           else
-            if user._id == forUser._id
+            if forUser && user._id == forUser._id
               h4 You haven't posted yet!
             else
               h4 hasn't posted yet!
@@ -34,7 +34,7 @@ html
               a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
                 img(src=user.images[index])
       else
-        if user._id == forUser._id
+        if forUser && user._id == forUser._id
           .row
             .col-sm-12
               form(action="/pupload", method="POST")

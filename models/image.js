@@ -6,6 +6,7 @@ var imageSchema = mongoose.Schema({
   user_id: String,
   src: String,
   comments: [String],
+  hidden: Boolean,
   test: Boolean
 });
 

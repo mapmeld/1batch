@@ -21,7 +21,6 @@
     "aws-sdk": "^2.2.28",
     "body-parser": "^1.14.2",
     "compression": "^1.6.0",
-    "connect-ensure-login": "^0.1.1",
     "cookie-parser": "^1.4.0",
     "crypto": "0.0.3",
     "csurf": "^1.8.3",

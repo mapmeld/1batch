@@ -4,10 +4,15 @@ html, body {
 
 .navbar {
   background: #fff;
+  border-bottom: 1px solid #000;
+}
+
+.navbar h1 {
+  margin-bottom: 0;
 }
 
 .main {
-  margin-top: 60px;
+  margin-top: 80px;
   margin-bottom: 60px;
 }
 
@@ -30,6 +35,10 @@ html, body {
 .pcon img {
   background: #444;
   width: 100%;
+}
+
+.homephotos {
+  margin-top: 50px;
 }
 
 .profilephotos .pcon {

@@ -58,9 +58,12 @@ html
                 button.btn.btn-success Test Upload
           .row
             .col-sm-12
-              p Draft images
-              for image in user.images
-                img(src=image)
+              if user.images.length
+                p Saved images
+                for image in user.images
+                  img(src=image)
+              else
+                p No images uploaded yet... try some!
 
       .row
         .col-sm-12

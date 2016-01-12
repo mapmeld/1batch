@@ -30,6 +30,8 @@ html, body {
   padding: 6px;
   width: 100%;
   display: block;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .pcon img {
@@ -40,6 +42,25 @@ html, body {
 .homephotos {
   margin-top: 50px;
 }
+
+@media (min-width: 768px) {
+  .homephotos > div {
+    height: 270px;
+  }
+}
+
+@media (min-width: 992px) {
+  .homephotos > div {
+    height: 350px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .homephotos > div {
+    height: auto;
+  }
+}
+
 
 .profilephotos .pcon {
   cursor: pointer;

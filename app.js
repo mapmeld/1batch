@@ -7,8 +7,6 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 var compression = require('compression');
 var mongoose = require('mongoose');
-var multer = require('multer');
-var ms3 = require('multer-s3');
 var csrf = require('csurf');
 
 const User = require('./models/user.js');
@@ -17,6 +15,7 @@ const Follow = require('./models/following.js');
 
 var setupAuth = require('./login.js').setupAuth;
 var middleware = require('./login.js').middleware;
+var setupUploads = require('./uploads.js');
 
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
 
@@ -41,25 +40,7 @@ app.use(session({
 var csrfProtection = csrf({ cookie: true });
 setupAuth(app, csrfProtection);
 
-var upload;
-if (process.env.S3_BUCKET && process.env.AWS_SECRET_KEY && process.env.AWS_ACCESS_KEY) {
-  upload = multer({
-    storage: ms3({
-      dirname: 'maps',
-      bucket: process.env.S3_BUCKET,
-      secretAccessKey: process.env.AWS_SECRET_KEY,
-      accessKeyId: process.env.AWS_ACCESS_KEY,
-      region: 'ap-southeast-1',
-      filename: function (req, file, cb) {
-        cb(null, Date.now());
-      }
-    })
-  });
-
-  app.post('/upload', upload.single('upload'), function (req, res) {
-    res.render('index');
-  });
-}
+setupUploads(app, csrfProtection);
 
 function printError (err, res) {
   res.json({ status: 'error', error: err });
@@ -169,30 +150,6 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
         return printError(err, res);
       }
       res.redirect('/profile/' + req.params.end_user);
-    });
-  });
-});
-
-app.post('/testupload', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
-    return res.redirect('/login');
-  }
-  var i = new Image();
-  i.user_id = req.user.name;
-  i.src = '/images/home1.jpg';
-  i.hidden = true;
-  i.test = false;
-  i.save(function (err) {
-    if (err) {
-      return printError(err, res);
-    }
-    req.user.images.push(i.src);
-    req.user.imageids.push(i._id);
-    req.user.save(function (err) {
-      if (err) {
-        return printError(err, res);
-      }
-      res.redirect('/profile');
     });
   });
 });

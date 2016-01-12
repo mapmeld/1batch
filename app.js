@@ -1,18 +1,19 @@
 /* @flow */
 
 var express = require('express');
-var bodyParser = require('body-parser');
-var cookieParser = require('cookie-parser');
-var session = require('express-session');
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const MongoStore = require('connect-mongo')(session);
 var compression = require('compression');
 var mongoose = require('mongoose');
 var multer = require('multer');
 var ms3 = require('multer-s3');
 var csrf = require('csurf');
 
-var User = require('./models/user.js');
-var Image = require('./models/image.js');
-var Follow = require('./models/following.js');
+const User = require('./models/user.js');
+const Image = require('./models/image.js');
+const Follow = require('./models/following.js');
 
 var setupAuth = require('./login.js').setupAuth;
 var middleware = require('./login.js').middleware;
@@ -28,7 +29,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(compression());
 app.use(cookieParser());
-app.use(session({ secret: process.env.GOOGLE_SESSION || 'fj23f90jfoijfl2mfp293i019eoijdoiqwj129', resave: false, saveUninitialized: false }));
+app.use(session({
+  store: new MongoStore({
+    mongooseConnection: mongoose.connection
+  }),
+  secret: process.env.SESSION || 'fj23f90jfoijfl2mfp293i019eoijdoiqwj129',
+  resave: false,
+  saveUninitialized: false
+}));
 
 var csrfProtection = csrf({ cookie: true });
 setupAuth(app, csrfProtection);

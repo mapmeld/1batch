@@ -33,6 +33,7 @@ html
               label Password
               input(type="password", name="password")
               br
+              input(type="hidden", name="_csrf", value="#{csrfToken}")
               button.btn.btn-primary Log In
           .col-sm-12.col-md-6
             form(action="/register", method="POST")
@@ -43,6 +44,7 @@ html
               label Password
               input(type="password", name="password")
               br
+              input(type="hidden", name="_csrf", value="#{csrfToken}")
               button.btn.btn-success Register New User
       .row
         .col-sm-12

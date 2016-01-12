@@ -11,13 +11,14 @@ var middleware = function(req, res, next) {
   })(req, res, next);
 };
 
-var setupAuth = function (app) {
+var setupAuth = function (app, csrfProtection) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  app.get('/login', function (req, res) {
+  app.get('/login', csrfProtection, function (req, res) {
     res.render('login', {
-      forUser: req.user
+      forUser: req.user,
+      csrfToken: req.csrfToken()
     });
   });
 
@@ -29,7 +30,7 @@ var setupAuth = function (app) {
     }
   });
 
-  app.post('/register', function (req, res) {
+  app.post('/register', csrfProtection, function (req, res) {
     var u = new User();
     u.name = req.body.username;
     u.localpass = req.body.password;
@@ -42,7 +43,7 @@ var setupAuth = function (app) {
     });
   });
 
-  app.post('/login', passport.authenticate('local', { failureRedirect: '/login' }), function (req, res) {
+  app.post('/login', passport.authenticate('local', { failureRedirect: '/login' }), csrfProtection, function (req, res) {
     res.redirect('/profile');
   });
 

@@ -35,7 +35,9 @@ html
               if following
                 a.btn.btn-success(href="#", disabled="true") Following
               else
-                a.btn.btn-success(href="/follow/#{user.name}") Follow
+                form.inline(action="/follow/#{user.name}", method="POST")
+                  input(type="hidden", name="_csrf", value="#{csrfToken}")
+                  button.btn.btn-success Follow
       if user.posted
         .row.profilephotos
           for index in [0, 1, 2, 3]
@@ -55,6 +57,7 @@ html
                 label Upload a photo that you might use
                 input(type="file")
                 br
+                input(type="hidden", name="_csrf", value="#{csrfToken}")
                 button.btn.btn-success Test Upload
           .row
             .col-sm-12

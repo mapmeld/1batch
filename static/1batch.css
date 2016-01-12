@@ -67,6 +67,10 @@ form input, form label {
   display: block;
 }
 
+form.inline {
+  display: inline;
+}
+
 a button {
   color: #000;
 }

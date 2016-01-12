@@ -8,6 +8,8 @@ var compression = require('compression');
 var mongoose = require('mongoose');
 var multer = require('multer');
 var ms3 = require('multer-s3');
+var csrf = require('csurf');
+
 var User = require('./models/user.js');
 var Image = require('./models/image.js');
 var Follow = require('./models/following.js');
@@ -28,7 +30,8 @@ app.use(compression());
 app.use(cookieParser());
 app.use(session({ secret: process.env.GOOGLE_SESSION || 'fj23f90jfoijfl2mfp293i019eoijdoiqwj129', resave: false, saveUninitialized: false }));
 
-setupAuth(app);
+var csrfProtection = csrf({ cookie: true });
+setupAuth(app, csrfProtection);
 
 var upload;
 if (process.env.S3_BUCKET && process.env.AWS_SECRET_KEY && process.env.AWS_ACCESS_KEY) {
@@ -62,7 +65,7 @@ app.get('/', function (req, res) {
   res.render('index');
 });
 
-app.get('/:username/photo/:photoid', function (req, res) {
+app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
   User.findOne({ name: req.params.username }, function (err, user) {
     if (err) {
       return printError(err, res);
@@ -80,13 +83,14 @@ app.get('/:username/photo/:photoid', function (req, res) {
       res.render('image', {
         user: user,
         image: image,
-        forUser: (req.user || null)
+        forUser: (req.user || null),
+        csrfToken: req.csrfToken()
       });
     });
   });
 });
 
-app.get('/profile/:username', middleware, function (req, res) {
+app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
   User.findOne({ name: req.params.username }, function (err, user) {
     if (err) {
       return printError(err, res);
@@ -99,7 +103,8 @@ app.get('/profile/:username', middleware, function (req, res) {
       res.render('profile', {
         user: user,
         forUser: (req.user || null),
-        following: following
+        following: following,
+        csrfToken: req.csrfToken()
       });
     }
     if (req.user) {
@@ -123,17 +128,18 @@ app.get('/profile/:username', middleware, function (req, res) {
   });
 });
 
-app.get('/profile', middleware, function (req, res) {
+app.get('/profile', middleware, csrfProtection, function (req, res) {
   if (!req.user) {
     return res.redirect('/login');
   }
   res.render('profile', {
     user: req.user,
-    forUser: req.user
+    forUser: req.user,
+    csrfToken: req.csrfToken()
   });
 });
 
-app.get('/follow/:end_user', middleware, function (req, res) {
+app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
   if (!req.user) {
     return res.redirect('/login');
   }
@@ -159,7 +165,7 @@ app.get('/follow/:end_user', middleware, function (req, res) {
   });
 });
 
-app.post('/testupload', middleware, function (req, res) {
+app.post('/testupload', middleware, csrfProtection, function (req, res) {
   if (!req.user) {
     return res.redirect('/login');
   }

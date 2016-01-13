@@ -17,6 +17,9 @@ var setupAuth = require('./login.js').setupAuth;
 var middleware = require('./login.js').middleware;
 var setupUploads = require('./uploads.js');
 
+var printError = require('./commonResponses.js').error;
+var printNoExist = require('./commonResponses.js').noExist;
+
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
 
 var app = express();
@@ -41,14 +44,6 @@ var csrfProtection = csrf({ cookie: true });
 setupAuth(app, csrfProtection);
 
 setupUploads(app, csrfProtection);
-
-function printError (err, res) {
-  res.json({ status: 'error', error: err });
-}
-
-function printNoExist (res) {
-  res.json({ status: 'missing', error: 'can\'t find that user or image' });
-}
 
 app.get('/', function (req, res) {
   res.render('index');

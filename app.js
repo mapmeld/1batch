@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
-var compression = require('compression');
+const compression = require('compression');
 var mongoose = require('mongoose');
 var csrf = require('csurf');
 

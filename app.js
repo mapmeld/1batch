@@ -20,14 +20,14 @@ var setupUploads = require('./uploads.js');
 var printError = require('./commonResponses.js').error;
 var printNoExist = require('./commonResponses.js').noExist;
 
+console.log('Connecting to MongoDB (required)');
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
 
 var app = express();
 app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
 app.use(express['static'](__dirname + '/static'));
-app.use(bodyParser({ limit: '50mb' }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(compression());
 app.use(cookieParser());

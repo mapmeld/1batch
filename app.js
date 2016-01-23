@@ -1,13 +1,15 @@
 /* @flow */
 
-var express = require('express');
+const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 const compression = require('compression');
-var mongoose = require('mongoose');
-var csrf = require('csurf');
+const mongoose = require('mongoose');
+const csrf = require('csurf');
+
+const cloudinary = require('cloudinary');
 
 const User = require('./models/user.js');
 const Image = require('./models/image.js');
@@ -64,6 +66,7 @@ app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
       if (!image) {
         return printNoExist(res);
       }
+      image.src = cloudinary.url(image.src, { format: "jpg", width: 750, height: 750, crop: "fill" });
       res.render('image', {
         user: user,
         image: image,
@@ -84,6 +87,9 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
     }
 
     function showProfile(following) {
+      user.images = user.images.map(function(imgsrc) {
+        return cloudinary.url(imgsrc, { format: "jpg", width: 500, height: 500, crop: "fill" });
+      });
       res.render('profile', {
         user: user,
         forUser: (req.user || null),
@@ -116,8 +122,12 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
   if (!req.user) {
     return res.redirect('/login');
   }
+  var user = req.user;
+  user.images = user.images.map(function(imgsrc) {
+    return cloudinary.url(imgsrc, { format: "jpg", width: 500, height: 500, crop: "fill" });
+  });
   res.render('profile', {
-    user: req.user,
+    user: user,
     forUser: req.user,
     csrfToken: req.csrfToken()
   });

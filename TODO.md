@@ -1,4 +1,3 @@
-cloudinary
 srcset
 comments
 newsfeed when you first log in

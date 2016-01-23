@@ -53,12 +53,11 @@ html
         if forUser && user._id == forUser._id
           .row
             .col-sm-12
-              form.well(action="/testupload", method="POST")
+              form.well(action="/upload?_csrf=#{csrfToken}", method="POST", enctype="multipart/form-data")
                 label Upload a photo that you might use
-                input(type="file")
+                input(type="file", name="upload")
                 br
-                input(type="hidden", name="_csrf", value="#{csrfToken}")
-                button.btn.btn-success Test Upload
+                button.btn.btn-success Upload
           .row
             .col-sm-12
               if user.images.length

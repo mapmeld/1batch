@@ -43,12 +43,12 @@ html
           for index in [0, 1, 2, 3]
             .col-sm-6.col-lg-3
               a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
-                img(src=user.images[index])
+                img(src=images[index].main, srcset="#{images[index].main} 1x, #{images[index].retina} 2x")
         .row.profilephotos
           for index in [4, 5, 6, 7]
             .col-sm-6.col-lg-3
               a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
-                img(src=user.images[index])
+                img(src=images[index].main, srcset="#{images[index].main} 1x, #{images[index].retina} 2x")
       else
         if forUser && user._id == forUser._id
           .row
@@ -60,10 +60,10 @@ html
                 button.btn.btn-success Upload
           .row
             .col-sm-12
-              if user.images.length
+              if images.length
                 p Saved images
-                for image in user.images
-                  img(src=image)
+                for image in images
+                  img(src=image.main, srcset="#{image.main} 1x, #{image.retina} 2x")
               else
                 p No images uploaded yet... try some!
 

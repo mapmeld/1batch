@@ -9,8 +9,6 @@ const compression = require('compression');
 const mongoose = require('mongoose');
 const csrf = require('csurf');
 
-const cloudinary = require('cloudinary');
-
 const User = require('./models/user.js');
 const Image = require('./models/image.js');
 const Follow = require('./models/following.js');
@@ -21,6 +19,7 @@ var setupUploads = require('./uploads.js');
 
 var printError = require('./commonResponses.js').error;
 var printNoExist = require('./commonResponses.js').noExist;
+var responsiveImg = require('./commonResponses.js').responsiveImg;
 
 console.log('Connecting to MongoDB (required)');
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
@@ -66,7 +65,7 @@ app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
       if (!image) {
         return printNoExist(res);
       }
-      image.src = cloudinary.url(image.src, { format: "jpg", width: 750, height: 750, crop: "fill" });
+      image.src = responsiveImg(image.src, true);
       res.render('image', {
         user: user,
         image: image,
@@ -87,11 +86,10 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
     }
 
     function showProfile(following) {
-      user.images = user.images.map(function(imgsrc) {
-        return cloudinary.url(imgsrc, { format: "jpg", width: 500, height: 500, crop: "fill" });
-      });
+      var images = user.images.map(responsiveImg);
       res.render('profile', {
         user: user,
+        images: images,
         forUser: (req.user || null),
         following: following,
         csrfToken: req.csrfToken()
@@ -123,11 +121,10 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
     return res.redirect('/login');
   }
   var user = req.user;
-  user.images = user.images.map(function(imgsrc) {
-    return cloudinary.url(imgsrc, { format: "jpg", width: 500, height: 500, crop: "fill" });
-  });
+  var images = user.images.map(responsiveImg);
   res.render('profile', {
     user: user,
+    images: images,
     forUser: req.user,
     csrfToken: req.csrfToken()
   });

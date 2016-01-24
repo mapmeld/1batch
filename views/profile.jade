@@ -29,9 +29,7 @@ html
             else
               h4 hasn't posted yet!
           if forUser
-            if forUser.name == user.name
-              a.btn.btn-success(href="#", disabled="true") You
-            else
+            if forUser.name !== user.name
               if following
                 a.btn.btn-success(href="#", disabled="true") Following
               else
@@ -43,29 +41,40 @@ html
           for index in [0, 1, 2, 3]
             if index < images.length
               .col-sm-6.col-lg-3
-                a(href="/#{user.name}/photo/#{images[index]._id}").pcon
+                a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
                   img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
         .row.profilephotos
           for index in [4, 5, 6, 7]
             if index < images.length
               .col-sm-6.col-lg-3
-                a(href="/#{user.name}/photo/#{images[index]._id}").pcon
+                a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
                   img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
       else
         if forUser && user.name == forUser.name
           .row
             .col-sm-12
               form.well(action="/upload?_csrf=#{csrfToken}", method="POST", enctype="multipart/form-data")
-                label Upload a photo that you might use
+                label Upload a photo that you might use. You can change your mind before posting.
                 input(type="file", name="upload")
                 br
                 button.btn.btn-success Upload
           .row
             .col-sm-12.savedphotos
               if saved.length
-                p Saved images
+                input.csrf(type="hidden", value=csrfToken)
+                p
+                  span Saved images (
+                  span.pickcount #{pickCount}
+                  span &nbsp;/ 8 picked)
                 for image in saved
-                  img(src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x", class="#{image.picked ? 'picked' : ''}")
+                  .col-sm-6.col-lg-4
+                    a.pcon(href="javascript:void(0);", class="#{image.picked ? 'picked' : ''}")
+                      img(id=image._id, src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x")
+                      span.pick
+                        if !image.picked
+                          button Pick &check;
+                        else
+                          button Remove x
               else
                 p No images uploaded yet... try some!
 

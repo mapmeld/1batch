@@ -103,3 +103,36 @@ a .btn-inverse {
 a button:hover {
   text-transform: none;
 }
+
+.savedphotos .pcon {
+  border: 1px solid #000;
+  border-radius: 18px;
+}
+
+.pcon.picked, .pcon.maybe-pick {
+  border: 1px solid blue;
+}
+
+.pcon.picked .pick, .pcon.maybe-pick .pick {
+  display: block;
+}
+
+.savedphotos .pick {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  text-align: center;
+  width: 100%;
+}
+
+.pcon .pick button {
+  background: darkgreen;
+  color: #fff;
+  padding: 10px;
+  border-radius: 30px;
+}
+
+.pcon.picked .pick button {
+  background: red;
+}

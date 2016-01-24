@@ -11,11 +11,11 @@ describe('photo page', function() {
   it('is invisible until user has published', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', true, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         requestImage('test', img._id, done, function(res) {
           assert.include(res.text, 'can\'t find that user or image');
@@ -28,16 +28,16 @@ describe('photo page', function() {
   it('gets its own page once user has published', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', true, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
-            return done(err);
+            return wrapup(done, err);
           }
           requestImage('test', img._id, done, function(res) {
             assert.include(res.text, 'http://example.com');
@@ -51,16 +51,16 @@ describe('photo page', function() {
   it('doesn\'t show if user published other images instead', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', false, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
-            return done(err);
+            return wrapup(done, err);
           }
           requestImage('test', img._id, done, function(res) {
             assert.include(res.text, 'can\'t find that user or image');
@@ -74,21 +74,21 @@ describe('photo page', function() {
   it('goes away when user hides an image', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', true, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
-            return done(err);
+            return wrapup(done, err);
           }
           img.hidden = true;
           img.save(function(err) {
             if (err) {
-              return done(err);
+              return wrapup(done, err);
             }
             requestImage('test', img._id, done, function(res) {
               assert.include(res.text, 'can\'t find that user or image');

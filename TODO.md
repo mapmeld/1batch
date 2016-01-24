@@ -1,4 +1,4 @@
-select images so that you can post
+show preview and captioning?
 comments
 newsfeed when you first log in
 i18n + react: http://blog.getsentry.com/2016/01/07/react-i18n.html

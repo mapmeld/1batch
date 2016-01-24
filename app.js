@@ -17,9 +17,10 @@ var setupAuth = require('./login.js').setupAuth;
 var middleware = require('./login.js').middleware;
 var setupUploads = require('./uploads.js');
 
-var printError = require('./commonResponses.js').error;
-var printNoExist = require('./commonResponses.js').noExist;
-var responsiveImg = require('./commonResponses.js').responsiveImg;
+var printError = require('./common.js').error;
+var printNoExist = require('./common.js').noExist;
+var responsiveImg = require('./common.js').responsiveImg;
+var following = require('./common.js').following;
 
 console.log('Connecting to MongoDB (required)');
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
@@ -46,60 +47,65 @@ setupAuth(app, csrfProtection);
 
 setupUploads(app, csrfProtection);
 
+// homepage
 app.get('/', function (req, res) {
   res.render('index');
 });
 
-app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
-  User.findOne({ name: req.params.username.toLowerCase() }, function (err, user) {
+// your own profile
+app.get('/profile', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  var user = req.user;
+  Image.find({ user_id: user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
     if (err) {
       return printError(err, res);
     }
-    if (!user || !user.posted) {
-      return printNoExist(res);
-    }
 
-    function showImage(following) {
-      Image.findOne({ _id: req.params.photoid, hidden: false, published: true }, '_id src comments caption', function (err, image) {
-        if (err) {
-          return printError(err, res);
+    var images = [];
+    var saved = [];
+    var pickCount = 0;
+    allimages.map(function(img) {
+      if (img.published) {
+        images.push(responsiveImg(img));
+      } else {
+        if (img.picked) {
+          pickCount++;
         }
-        if (!image) {
-          return printNoExist(res);
-        }
-        image = responsiveImg(image, true);
-        res.render('image', {
-          user: user,
-          image: image,
-          forUser: (req.user || null),
-          csrfToken: req.csrfToken()
-        });
-      });
+        saved.push(responsiveImg(img));
+      }
+    });
+    if (user.posted) {
+      // once user posts, end photo-picking
+      saved = [];
     }
+    saved.sort(function(a, b) {
+      // show picked photos first
+      if (a.picked && !b.picked) {
+        return -1;
+      } else if (a.picked !== b.picked) {
+        return 1;
+      }
+      return 0;
+    });
 
-    if (req.user) {
-      Follow.findOne({ start_user_id: req.user.name, end_user_id: user.name }, function (err, f) {
-        if (err) {
-          return printError(err, res);
-        }
-        if (f) {
-          if (f.blocked) {
-            return printNoExist(res);
-          } else {
-            return showImage(true);
-          }
-        } else {
-          return showImage(false);
-        }
-      });
-    } else {
-      showImage(false);
-    }
+    res.render('profile', {
+      user: user,
+      images: images,
+      saved: saved,
+      forUser: req.user,
+      csrfToken: req.csrfToken(),
+      pickCount: pickCount
+    });
   });
 });
 
+// someone else's profile
 app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
   if (req.user && req.params.username.toLowerCase() === req.user.name) {
+    // redirect to your own profile
     return res.redirect('/profile');
   }
   User.findOne({ name: req.params.username.toLowerCase() }, '_id name posted', function (err, user) {
@@ -126,59 +132,46 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
         });
       });
     }
-    if (req.user) {
-      Follow.findOne({ start_user_id: req.user.name, end_user_id: user.name }, function (err, f) {
-        if (err) {
-          return printError(err, res);
-        }
-        if (f) {
-          if (f.blocked) {
-            return printNoExist(res);
-          } else {
-            return showProfile(true);
-          }
-        } else {
-          return showProfile(false);
-        }
-      });
-    } else {
-      showProfile(false);
-    }
+    following(req.user, user, res, showProfile);
   });
 });
 
-app.get('/profile', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
-    return res.redirect('/login');
-  }
-  var user = req.user;
-  Image.find({ user_id: user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
+// view a published image
+app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, res) {
+  User.findOne({ name: req.params.username.toLowerCase() }, function (err, user) {
     if (err) {
       return printError(err, res);
     }
+    if (!user || !user.posted) {
+      return printNoExist(res);
+    }
 
-    var images = [];
-    var saved = [];
-    allimages.map(function(img) {
-      if (img.published) {
-        images.push(responsiveImg(img));
-      } else {
-        saved.push(responsiveImg(img));
-      }
-    });
+    function showImage(following) {
+      Image.findOne({ _id: req.params.photoid, hidden: false, published: true }, '_id src comments caption', function (err, image) {
+        if (err) {
+          return printError(err, res);
+        }
+        if (!image) {
+          return printNoExist(res);
+        }
+        image = responsiveImg(image, true);
+        res.render('image', {
+          user: user,
+          image: image,
+          forUser: (req.user || null),
+          csrfToken: req.csrfToken()
+        });
+      });
+    }
 
-    res.render('profile', {
-      user: user,
-      images: images,
-      saved: saved,
-      forUser: req.user,
-      csrfToken: req.csrfToken()
-    });
+    following(req.user, user, res, showImage);
   });
 });
 
+// follow another user
 app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
   if (!req.user) {
+    // log in first
     return res.redirect('/login');
   }
   Follow.findOne({ start_user_id: req.user.name, end_user_id: req.params.end_user }, function (err, existing) {
@@ -186,7 +179,8 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
       return printError(err, res);
     }
     if (existing) {
-      return res.redirect('/profile');
+      // follow already exists
+      return res.redirect('/profile/' + req.params.end_user);
     }
 
     var f = new Follow();
@@ -199,6 +193,34 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
         return printError(err, res);
       }
       res.redirect('/profile/' + req.params.end_user);
+    });
+  });
+});
+
+// pick an image
+app.post('/pick', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  if (req.user.posted) {
+    // would immediately publish, and we don't allow that
+    return printError('you already posted', res);
+  }
+  Image.findById(req.body.id, function (err, img) {
+    if (err) {
+      return printError(err, res);
+    }
+    if (!img || (img.user_id !== req.user.name)) {
+      // that isn't one of your images
+      return printNoExist(err, res);
+    }
+    img.picked = req.body.makePick;
+    img.save(function (err) {
+      if (err) {
+        return printError(err, res);
+      }
+      res.json({ status: 'success' });
     });
   });
 });

@@ -3,7 +3,7 @@ var Strategy = require('passport-local').Strategy;
 var GoogleStrategy = require('passport-google-oauth2').Strategy;
 
 var User = require('./models/user.js');
-var printError = require('./commonResponses.js').error;
+var printError = require('./common.js').error;
 
 var middleware = function(req, res, next) {
   passport.authenticate('local', function(err, user, info) {

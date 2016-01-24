@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 var middleware = require('./login.js').middleware;
-var commonResponses = require('./commonResponses');
+var commonResponses = require('./common');
 const Image = require('./models/image.js');
 
 module.exports = function (app, csrfProtection) {

@@ -36,7 +36,7 @@ module.exports = {
       .expect(200)
       .end(function(err, res) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         callback(res);
       });
@@ -48,17 +48,17 @@ module.exports = {
       .expect(200)
       .end(function(err, res) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         callback(res);
       });
   },
 
-  wrapup: function(done) {
+  wrapup: function(done, err) {
     User.remove({ test: true }, function() {
       Image.remove({ test: true }, function() {
         if (done) {
-          done();
+          done(err);
         }
       });
     });

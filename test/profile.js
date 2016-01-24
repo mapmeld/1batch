@@ -18,7 +18,7 @@ describe('profile page visibility', function() {
   it('shows user name but no photos', function(done) {
     createUser('test', function(err) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       requestProfile('test', done, function(res) {
         assert.include(res.text, 'test');
@@ -33,11 +33,11 @@ describe('photo on profile page', function() {
   it('is hidden when not public', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', false, function(err) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         requestProfile('test', done, function(res) {
           assert.include(res.text, 'hasn\'t posted yet!');
@@ -50,16 +50,16 @@ describe('photo on profile page', function() {
   it('is visible once user has published', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', true, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
-            return done(err);
+            return wrapup(done, err);
           }
           requestProfile('test', done, function(res) {
             assert.notInclude(res.text, 'hasn\'t posted yet!');
@@ -74,16 +74,16 @@ describe('photo on profile page', function() {
   it('doesn\'t show if user published other images instead', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', false, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
-            return done(err);
+            return wrapup(done, err);
           }
           requestProfile('test', done, function(res) {
             assert.notInclude(res.text, 'hasn\'t posted yet!');
@@ -98,21 +98,21 @@ describe('photo on profile page', function() {
   it('goes away when user hides an image', function(done) {
     createUser('test', function(err, user) {
       if (err) {
-        return done(err);
+        return wrapup(done, err);
       }
       createImage('test', true, function(err, img) {
         if (err) {
-          return done(err);
+          return wrapup(done, err);
         }
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
-            return done(err);
+            return wrapup(done, err);
           }
           img.hidden = true;
           img.save(function(err) {
             if (err) {
-              return done(err);
+              return wrapup(done, err);
             }
             requestProfile('test', done, function(res) {
               assert.notInclude(res.text, 'hasn\'t posted yet!');

@@ -16,12 +16,44 @@ block content
         a(href="/profile/#{user.name}") #{user.name}
       h4 posted #{posted}
 
+  if image.hidden
+    h1
+      span You hid this image.
+      small &nbsp;You can un-hide or delete it.
+      br
+    .row
+      .col-sm-6
+        form.inline(action="/hide", method="POST")
+          input(type="hidden", name="_csrf", value="#{csrfToken}")
+          input(type="hidden", name="id", value="#{image._id}")
+          input(type="hidden", name="makeHide", value="false")
+          button.btn.btn-success Unhide
+      .col-sm-6
+        form.inline(action="/delete", method="POST")
+          input(type="hidden", name="_csrf", value="#{csrfToken}")
+          input(type="hidden", name="id", value="#{image._id}")
+          button.btn.btn-danger Completely Delete
+          br
+          br
+
   .row
-    .col-sm-12
+    .col-sm-12.bigimagecontainer
       hr
       img.bigimage(src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x")
 
-  if presentUser
+  if forUser
+    if forUser.name == user.name
+      .row
+        .col-sm-6
+          if !image.hidden
+            form.inline(action="/hide", method="POST")
+              input(type="hidden", name="_csrf", value="#{csrfToken}")
+              input(type="hidden", name="id", value="#{image._id}")
+              input(type="hidden", name="makeHide", value="true")
+              button.btn.btn-warning Hide / Remove
+              br
+              br
+
     .row
       .col-sm-12
         form(action="/comment", method="POST")

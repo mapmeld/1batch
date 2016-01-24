@@ -162,11 +162,14 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
     }
 
     function showImage(following) {
-      Image.findOne({ _id: req.params.photoid, hidden: false, published: true }, '_id src comments caption', function (err, image) {
+      Image.findOne({ _id: req.params.photoid }, '_id src comments caption hidden published', function (err, image) {
         if (err) {
           return printError(err, res);
         }
         if (!image) {
+          return printNoExist(res);
+        }
+        if ((req.user.name !== user.name) && (image.hidden || !image.published)) {
           return printNoExist(res);
         }
         image = responsiveImg(image, true);
@@ -242,10 +245,46 @@ app.post('/pick', middleware, csrfProtection, function (req, res) {
       return printError(err, res);
     }
     if (!imgcount) {
-      // that isn't one of your images
-      return printNoExist(err, res);
+      return printError('that isn\'t your image', res);
     }
     res.json({ status: 'success' });
+  });
+});
+
+app.get('/hide', middleware, csrfProtection, function (req, res) {
+  res.render('hide');
+});
+
+app.post('/hide', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  Image.update({ _id: req.body.id, user_id: req.user.name }, { hidden: (req.body.makeHide === 'true') }, function (err, imgcount) {
+    if (err) {
+      return printError(err, res);
+    }
+    if (!imgcount) {
+      return printError('that isn\'t your image', res);
+    }
+    if (req.body.makeHide === 'true') {
+      res.redirect('/hide');
+    } else {
+      res.redirect('/' + req.user.name + '/photo/' + req.body.id);
+    }
+  });
+});
+
+app.post('/delete', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  Image.remove({ _id: req.body.id, user_id: req.user.name }, function (err) {
+    if (err) {
+      return printError(err, res);
+    }
+    res.redirect('/hide');
   });
 });
 

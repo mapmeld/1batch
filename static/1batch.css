@@ -150,3 +150,8 @@ h1 a, h2 a, h1 a:hover, h2 a:hover {
 .underbar {
   border-bottom: 1px solid #000;
 }
+
+img.hidemark {
+  border: #f00;
+  opacity: 0.5;
+}

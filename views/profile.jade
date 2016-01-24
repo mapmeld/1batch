@@ -35,7 +35,7 @@ block content
         if index < images.length
           .col-sm-6.col-lg-3
             a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
-              img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
+              img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidemark' : ''}")
     .row.profilephotos
       for index in [4, 5, 6, 7]
         if index < images.length
@@ -85,4 +85,5 @@ block content
 block scripts
   script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
   script(type="text/javascript", src="/follow-button.js")
-  script(type="text/javascript", src="/image-select.js")
+  if forUser && user.name == forUser.name
+    script(type="text/javascript", src="/image-select.js")

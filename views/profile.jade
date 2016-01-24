@@ -5,14 +5,14 @@ block content
   input.username(type="hidden", value=user.name)
 
   .row
-    .col-sm-12
+    .col-sm-12.underbar
+      if forUser
+        a.btn.btn-info.pull-right(href="/logout") Log Out
+      else
+        a.btn.btn-primary.pull-right(href="/profile") Log In
       h2
         a(href="/feed") 1batch
         small &nbsp;an app for sharing 8 photos
-      if forUser
-        a.btn.btn-inverse.pull-right(href="/logout") Log Out
-      else
-        a.btn.btn-primary.pull-right(href="/profile") Log In
   .row
     .col-sm-12.col-md-6
       h1= user.name
@@ -75,6 +75,11 @@ block content
           .col-sm-12.postnow
             hr
             button.btn.btn-success Publish Picked Photos
+      else if (posted.indexOf('minutes') > -1 || posted.indexOf('seconds') > -1)
+        .row
+          .col-sm-12.postnow
+            hr
+            button.btn.btn-danger Unpublish Photos
 
 block scripts
   script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")

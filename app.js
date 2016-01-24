@@ -107,7 +107,8 @@ app.get('/feed', middleware, csrfProtection, function (req, res) {
         return printError(err, res);
       }
       res.render('feed', {
-        follows: follows
+        follows: follows,
+        forUser: req.user
       });
     });
   } else {
@@ -254,31 +255,53 @@ app.post('/publish', middleware, csrfProtection, function (req, res) {
     // log in first
     return res.redirect('/login');
   }
-  if (req.user.posted) {
-    return printError('you already posted', res);
-  }
-  Image.count({ user_id: req.user.name, picked: true, hidden: false }, function (err, count) {
-    if (err) {
-      return printError(err, res);
+  if (req.body.makePublish === 'true') {
+    // publish
+    if (req.user.posted) {
+      return printError('you already posted', res);
     }
-    if (!count) {
-      return printError('you have no picked images', res);
-    }
-    if (count > 8) {
-      return printError('you have too many picked images', res);
-    }
-    User.update({ name: req.user.name }, { posted: (new Date()) }, function(err) {
+    Image.count({ user_id: req.user.name, picked: true, hidden: false }, function (err, count) {
       if (err) {
         return printError(err, res);
       }
-      Image.update({ user_id: req.user.name, picked: true, hidden: false }, { published: true }, { multi: true }, function(err) {
+      if (!count) {
+        return printError('you have no picked images', res);
+      }
+      if (count > 8) {
+        return printError('you have too many picked images', res);
+      }
+      User.update({ name: req.user.name }, { posted: (new Date()) }, function(err) {
+        if (err) {
+          return printError(err, res);
+        }
+        Image.update({ user_id: req.user.name, picked: true, hidden: false }, { published: true }, { multi: true }, function(err) {
+          if (err) {
+            return printError(err, res);
+          }
+          res.json({ status: 'success' });
+        });
+      });
+    });
+  } else {
+    // un-publish within 60 minutes
+    if (!req.user.posted) {
+      return printError('you have not posted', res);
+    }
+    if ((new Date()) - req.user.posted > 60 * 60 * 1000) {
+      return printError('too much time has passed. you can remove images but not re-publish', res);
+    }
+    User.update({ name: req.user.name }, { posted: null }, function(err) {
+      if (err) {
+        return printError(err, res);
+      }
+      Image.update({ user_id: req.user.name }, { published: false }, { multi: true }, function(err) {
         if (err) {
           return printError(err, res);
         }
         res.json({ status: 'success' });
       });
     });
-  });
+  }
 });
 
 app.listen(process.env.PORT || 8080, function() { });

@@ -53,7 +53,11 @@ var setupAuth = function (app, csrfProtection) {
   });
 
   app.post('/login', passport.authenticate('local', { failureRedirect: '/login' }), csrfProtection, function (req, res) {
-    res.redirect('/profile');
+    if (req.user.posted) {
+      res.redirect('/feed');
+    } else {
+      res.redirect('/profile');
+    }
   });
 
   app.get('/logout', function (req, res) {

@@ -178,22 +178,34 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
     if (err) {
       return printError(err, res);
     }
-    if (existing) {
-      // follow already exists
-      return res.redirect('/profile/' + req.params.end_user);
-    }
-
-    var f = new Follow();
-    f.start_user_id = req.user.name;
-    f.end_user_id = req.params.end_user;
-    f.blocked = false;
-    f.test = false;
-    f.save(function (err) {
-      if (err) {
-        return printError(err, res);
+    if (req.body.makeFollow === 'true') {
+      if (existing) {
+        // follow already exists
+        return printError('you already follow', res);
       }
-      res.redirect('/profile/' + req.params.end_user);
-    });
+
+      var f = new Follow();
+      f.start_user_id = req.user.name;
+      f.end_user_id = req.params.end_user;
+      f.blocked = false;
+      f.test = false;
+      f.save(function (err) {
+        if (err) {
+          return printError(err, res);
+        }
+        res.json({ status: 'success' });
+      });
+    } else {
+      if (!existing) {
+        return printError('you already don\'t follow', res);
+      }
+      Follow.remove({ start_user_id: req.user.name, end_user_id: req.params.end_user, blocked: false }, function (err) {
+        if (err) {
+          return printError(err, res);
+        }
+        res.json({ status: 'success' });
+      });
+    }
   });
 });
 
@@ -215,7 +227,7 @@ app.post('/pick', middleware, csrfProtection, function (req, res) {
       // that isn't one of your images
       return printNoExist(err, res);
     }
-    img.picked = req.body.makePick;
+    img.picked = (req.body.makePick === 'true');
     img.save(function (err) {
       if (err) {
         return printError(err, res);

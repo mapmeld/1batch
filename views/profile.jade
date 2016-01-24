@@ -6,6 +6,8 @@ html
     link(rel="stylesheet", type="text/css", href="/lib/bootstrap.min.css")
     link(rel="stylesheet", type="text/css", href="/1batch.css")
   body
+    input.csrf(type="hidden", value=csrfToken)
+    input.username(type="hidden", value=user.name)
     .container
       .row
         .col-sm-12
@@ -31,11 +33,9 @@ html
           if forUser
             if forUser.name !== user.name
               if following
-                a.btn.btn-success(href="#", disabled="true") Following
+                button.btn.btn-danger.follow Unfollow
               else
-                form.inline(action="/follow/#{user.name}", method="POST")
-                  input(type="hidden", name="_csrf", value="#{csrfToken}")
-                  button.btn.btn-success Follow
+                button.btn.btn-success.follow Follow
       if user.posted
         .row.profilephotos
           for index in [0, 1, 2, 3]
@@ -61,7 +61,6 @@ html
           .row
             .col-sm-12.savedphotos
               if saved.length
-                input.csrf(type="hidden", value=csrfToken)
                 p
                   span Saved images (
                   span.pickcount #{pickCount}
@@ -86,4 +85,5 @@ html
             a(href="https://github.com/mapmeld/1batch") open source
 
     script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
+    script(type="text/javascript", src="/follow-button.js")
     script(type="text/javascript", src="/image-select.js")

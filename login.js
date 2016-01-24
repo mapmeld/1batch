@@ -32,15 +32,23 @@ var setupAuth = function (app, csrfProtection) {
   });
 
   app.post('/register', csrfProtection, function (req, res) {
-    var u = new User();
-    u.name = req.body.username;
-    u.localpass = req.body.password;
-    u.test = false;
-    u.save(function (err) {
+    User.find({ name: req.body.username.toLowerCase() }, function (err, users) {
       if (err) {
-        return printError(err, res);
+        return printError(res, err);
       }
-      res.redirect('/login');
+      if (users.length) {
+        return printError(res, 'user with that name already exists');
+      }
+      var u = new User();
+      u.name = req.body.username.toLowerCase();
+      u.localpass = req.body.password;
+      u.test = false;
+      u.save(function (err) {
+        if (err) {
+          return printError(err, res);
+        }
+        res.redirect('/login');
+      });
     });
   });
 

@@ -77,6 +77,9 @@ app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
 });
 
 app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
+  if (req.user && req.params.username === req.user.name) {
+    return res.redirect('/profile');
+  }
   User.findOne({ name: req.params.username }, function (err, user) {
     if (err) {
       return printError(err, res);

@@ -27,16 +27,18 @@ module.exports = function (app, csrfProtection) {
     app.post('/upload', upload.single('upload'), function (req, res) {
       res.render('index');
     });
-  } else if (process.env.CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  } else if (process.env.CLOUDINARY_URL || (process.env.CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)) {
     const cloudinary = require('cloudinary');
     const busboy = require('connect-busboy');
     app.use(busboy());
 
-    cloudinary.config({
-      cloud_name: process.env.CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET
-    });
+    if (!process.env.CLOUDINARY_URL) {
+      cloudinary.config({
+        cloud_name: process.env.CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+      });
+    }
 
     app.post('/upload', csrfProtection, middleware, function (req, res) {
       if (!req.user) {
@@ -51,6 +53,7 @@ module.exports = function (app, csrfProtection) {
           i.src = result.public_id;
           i.published = false;
           i.picked = false;
+          i.hidden = false;
           i.save(function(err) {
             if (err) {
               return commonResponses.error(err, res);

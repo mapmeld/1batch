@@ -52,18 +52,19 @@ html
       else
         if forUser && user.name == forUser.name
           .row
-            .col-sm-12
+            .col-sm-12.col-md-6
               form.well(action="/upload?_csrf=#{csrfToken}", method="POST", enctype="multipart/form-data")
                 label Upload a photo that you might use. You can change your mind before posting.
+                hr
                 input(type="file", name="upload")
-                br
-                button.btn.btn-success Upload
+                button.btn.btn-success.pull-right Upload
+                .clearfix
           .row
             .col-sm-12.savedphotos
               if saved.length
-                p
+                h4
                   span Saved images (
-                  span.pickcount #{pickCount}
+                  span.pickcount
                   span &nbsp;/ 8 picked)
                 for image in saved
                   .col-sm-6.col-lg-4
@@ -75,7 +76,12 @@ html
                         else
                           button Remove x
               else
-                p No images uploaded yet... try some!
+                p No images uploaded yet...
+          if saved.length
+            .row
+              .col-sm-12.postnow
+                hr
+                button.btn.btn-success Publish Picked Photos
 
       .row
         .col-sm-12

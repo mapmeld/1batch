@@ -41,6 +41,27 @@ $(function() {
   });
 
   function updatePickCount() {
-    $(".pickcount").text($(".picked").length);
+    var count = $(".picked").length;
+    if (count && count <= 8) {
+      $(".postnow").show();
+    } else {
+      $(".postnow").hide();
+    }
+    $(".pickcount").text(count);
   }
+
+  $(".postnow button").click(function() {
+    $.post("/publish", {
+      _csrf: $(".csrf").val(),
+      makePublish: true
+    }, function (response) {
+      if (response.status && response.status === 'success') {
+        window.location.reload();
+      } else {
+        alert("An error occurred");
+      }
+    });
+  });
+
+  updatePickCount();
 });

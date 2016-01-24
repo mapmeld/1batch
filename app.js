@@ -66,14 +66,10 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
 
     var images = [];
     var saved = [];
-    var pickCount = 0;
     allimages.map(function(img) {
       if (img.published) {
         images.push(responsiveImg(img));
       } else {
-        if (img.picked) {
-          pickCount++;
-        }
         saved.push(responsiveImg(img));
       }
     });
@@ -96,8 +92,7 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
       images: images,
       saved: saved,
       forUser: req.user,
-      csrfToken: req.csrfToken(),
-      pickCount: pickCount
+      csrfToken: req.csrfToken()
     });
   });
 });
@@ -219,20 +214,49 @@ app.post('/pick', middleware, csrfProtection, function (req, res) {
     // would immediately publish, and we don't allow that
     return printError('you already posted', res);
   }
-  Image.findById(req.body.id, function (err, img) {
+  Image.update({ _id: req.body.id, user_id: req.user.name },
+    { picked: (req.body.makePick === 'true') },
+    function (err, imgcount) {
     if (err) {
       return printError(err, res);
     }
-    if (!img || (img.user_id !== req.user.name)) {
+    if (!imgcount) {
       // that isn't one of your images
       return printNoExist(err, res);
     }
-    img.picked = (req.body.makePick === 'true');
-    img.save(function (err) {
+    res.json({ status: 'success' });
+  });
+});
+
+// publish picked images
+app.post('/publish', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  if (req.user.posted) {
+    return printError('you already posted', res);
+  }
+  Image.count({ user_id: req.user.name, picked: true, hidden: false }, function (err, count) {
+    if (err) {
+      return printError(err, res);
+    }
+    if (!count) {
+      return printError('you have no picked images', res);
+    }
+    if (count > 8) {
+      return printError('you have too many picked images', res);
+    }
+    User.update({ name: req.user.name }, { posted: (new Date()) }, function(err) {
       if (err) {
         return printError(err, res);
       }
-      res.json({ status: 'success' });
+      Image.update({ user_id: req.user.name, picked: true, hidden: false }, { published: true }, { multi: true }, function(err) {
+        if (err) {
+          return printError(err, res);
+        }
+        res.json({ status: 'success' });
+      });
     });
   });
 });

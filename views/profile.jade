@@ -70,16 +70,17 @@ block content
                       button Remove x
           else
             p No images uploaded yet...
-      if saved.length
-        .row
-          .col-sm-12.postnow
-            hr
-            button.btn.btn-success Publish Picked Photos
-      else if (posted.indexOf('minutes') > -1 || posted.indexOf('seconds') > -1)
-        .row
-          .col-sm-12.postnow
-            hr
-            button.btn.btn-danger Unpublish Photos
+  if saved.length
+    .row
+      .col-sm-12.postnow
+        hr
+        button.btn.btn-success Publish Picked Photos
+  else
+    if (posted && ((posted.indexOf('ms') > -1) || (posted.indexOf('minute') > -1) || (posted.indexOf('second') > -1)))
+      .row
+        .col-sm-12.postnow
+          hr
+          button.btn.btn-danger.unpublish Unpublish Photos
 
 block scripts
   script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")

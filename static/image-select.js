@@ -42,7 +42,7 @@ $(function() {
 
   function updatePickCount() {
     var count = $(".picked").length;
-    if (count && count <= 8) {
+    if ((count && count <= 8) || $(".unpublish").length) {
       $(".postnow").show();
     } else {
       $(".postnow").hide();
@@ -50,10 +50,10 @@ $(function() {
     $(".pickcount").text(count);
   }
 
-  $(".postnow button").click(function() {
+  $(".postnow button").click(function(e) {
     $.post("/publish", {
       _csrf: $(".csrf").val(),
-      makePublish: true
+      makePublish: !($(e.currentTarget).hasClass("unpublish"))
     }, function (response) {
       if (response.status && response.status === 'success') {
         window.location.reload();

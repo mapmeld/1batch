@@ -1,6 +1,9 @@
 extends ./layout.jade
 
 block content
+  input.csrf(type="hidden", value=csrfToken)
+  input.username(type="hidden", value=user.name)
+
   .row
     .col-sm-12.underbar
       if forUser
@@ -15,6 +18,12 @@ block content
       h1
         a(href="/profile/#{user.name}") #{user.name}
       h4 posted #{posted}
+      if forUser
+        if forUser.name !== user.name
+          if following
+            button.btn.btn-danger.follow Unfollow
+          else
+            button.btn.btn-success.follow Follow
 
   if image.hidden
     h1
@@ -79,4 +88,16 @@ block content
             else
               td
                 a(href="/profile/#{comment.user}")= comment.user
-              td= comment.text
+              td
+                p= comment.text
+                if forUser && forUser.name === user.name
+                  td
+                    form.inline.pull-right(action="/block", method="POST")
+                      input(type="hidden", name="_csrf", value="#{csrfToken}")
+                      input(type="hidden", name="banuser", value="#{comment.user}")
+                      input(type="hidden", name="id", value="#{image._id}")
+                      button.btn.btn-danger.btn-xs Block
+
+block scripts
+  script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
+  script(type="text/javascript", src="/follow-button.js")

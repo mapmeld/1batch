@@ -176,7 +176,7 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
         if (!image) {
           return printNoExist(res);
         }
-        if ((req.user.name !== user.name) && (image.hidden || !image.published)) {
+        if ((!req.user || (req.user.name !== user.name)) && (image.hidden || !image.published)) {
           return printNoExist(res);
         }
         comments = image.comments || [];
@@ -188,7 +188,8 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
           posted: cleanDate(user.posted),
           forUser: (req.user || null),
           csrfToken: req.csrfToken(),
-          canComment: (req.user.name === user.name) || userFollowsSource || sourceFollowsUser
+          following: userFollowsSource,
+          canComment: req.user && ((req.user.name === user.name) || userFollowsSource || sourceFollowsUser)
         });
       });
     }
@@ -206,6 +207,9 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
   if (!req.user) {
     // log in first
     return res.redirect('/login');
+  }
+  if (req.user.name === req.params.end_user) {
+    return printError('you can\'t follow yourself', res);
   }
   Follow.findOne({ start_user_id: req.user.name, end_user_id: req.params.end_user }, function (err, existing) {
     if (err) {
@@ -239,6 +243,60 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
         res.json({ status: 'success' });
       });
     }
+  });
+});
+
+// block another user
+app.post('/block', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  if (req.user.name === req.body.banuser) {
+    return printError('you can\'t block yourself', res);
+  }
+  // remove a follow in either direction
+  Follow.remove({ start_user_id: req.user.name, end_user_id: req.body.banuser, blocked: false }, function (err) {
+    if (err) {
+      return printError(err, res);
+    }
+    Follow.remove({ start_user_id: req.body.banuser, end_user_id: req.user.name, blocked: false }, function (err) {
+      if (err) {
+        return printError(err, res);
+      }
+
+      // create a new block
+      var f = new Follow();
+      f.start_user_id = req.body.banuser;
+      f.end_user_id = req.user.name;
+      f.blocked = true;
+      f.test = false;
+      f.save(function (err) {
+        if (err) {
+          return printError(err, res);
+        }
+        Image.findById(req.body.id, function (err, img) {
+          if (err) {
+            return printError(err, res);
+          }
+          if (img) {
+            for (var c = img.comments.length - 1; c >= 0; c--) {
+              if (img.comments[c].user === req.body.banuser) {
+                img.comments.splice(c, 1);
+              }
+            }
+            img.save(function(err) {
+              if (err) {
+                return printError(err, res);
+              }
+              res.render('block', { exist: true });
+            });
+          } else {
+            res.render('block', { exist: false });
+          }
+        });
+      });
+    });
   });
 });
 
@@ -383,7 +441,7 @@ app.post('/comment', middleware, csrfProtection, function (req, res) {
             if (!img.comments) {
               img.comments = [];
             }
-            img.comments.push({ user: user.name, text: req.body.text.trim() });
+            img.comments.push({ user: req.user.name, text: req.body.text.trim() });
             img.save(function (err){
               if (err) {
                 return printError(err, res);

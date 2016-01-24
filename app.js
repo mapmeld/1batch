@@ -55,7 +55,7 @@ app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
     if (err) {
       return printError(err, res);
     }
-    if (!user) {
+    if (!user || !user.posted) {
       return printNoExist(res);
     }
 

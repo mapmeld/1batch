@@ -4,50 +4,28 @@ const assert = require('chai').assert;
 
 const createUser = require('./common.js').createUser;
 const createImage = require('./common.js').createImage;
-const requestProfile = require('./common.js').requestProfile;
+const requestImage = require('./common.js').requestImage;
 const wrapup = require('./common.js').wrapup;
 
-describe('profile page visibility', function() {
-  it('indicates when user is missing', function(done) {
-    requestProfile('test', done, function(res) {
-      assert.include(res.text, 'can\'t find that user');
-      wrapup(done);
-    });
-  });
-
-  it('shows user name but no photos', function(done) {
-    createUser('test', function(err) {
-      if (err) {
-        return done(err);
-      }
-      requestProfile('test', done, function(res) {
-        assert.include(res.text, 'test');
-        assert.include(res.text, 'hasn\'t posted yet!');
-        wrapup(done);
-      });
-    });
-  });
-});
-
-describe('photo on profile page', function() {
-  it('is hidden when not public', function(done) {
+describe('photo page', function() {
+  it('is invisible until user has published', function(done) {
     createUser('test', function(err, user) {
       if (err) {
         return done(err);
       }
-      createImage('test', false, function(err) {
+      createImage('test', true, function(err, img) {
         if (err) {
           return done(err);
         }
-        requestProfile('test', done, function(res) {
-          assert.include(res.text, 'hasn\'t posted yet!');
+        requestImage('test', img._id, done, function(res) {
+          assert.include(res.text, 'can\'t find that user or image');
           wrapup(done);
         });
       });
     });
   });
 
-  it('is visible once user has published', function(done) {
+  it('gets its own page once user has published', function(done) {
     createUser('test', function(err, user) {
       if (err) {
         return done(err);
@@ -61,9 +39,8 @@ describe('photo on profile page', function() {
           if (err) {
             return done(err);
           }
-          requestProfile('test', done, function(res) {
-            assert.notInclude(res.text, 'hasn\'t posted yet!');
-            assert.include(res.text, '/test/photo/' + img._id);
+          requestImage('test', img._id, done, function(res) {
+            assert.include(res.text, 'http://example.com');
             wrapup(done);
           });
         });
@@ -85,9 +62,8 @@ describe('photo on profile page', function() {
           if (err) {
             return done(err);
           }
-          requestProfile('test', done, function(res) {
-            assert.notInclude(res.text, 'hasn\'t posted yet!');
-            assert.notInclude(res.text, '/test/photo/' + img._id);
+          requestImage('test', img._id, done, function(res) {
+            assert.include(res.text, 'can\'t find that user or image');
             wrapup(done);
           });
         });
@@ -114,9 +90,8 @@ describe('photo on profile page', function() {
             if (err) {
               return done(err);
             }
-            requestProfile('test', done, function(res) {
-              assert.notInclude(res.text, 'hasn\'t posted yet!');
-              assert.notInclude(res.text, '/test/photo/' + img._id);
+            requestImage('test', img._id, done, function(res) {
+              assert.include(res.text, 'can\'t find that user or image');
               wrapup(done);
             });
           });

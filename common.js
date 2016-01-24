@@ -1,5 +1,6 @@
 const cloudinary = require('cloudinary');
 const Follow = require('./models/following.js');
+const ago = require('time-ago')().ago;
 
 // respond with error
 function error(err, res) {
@@ -58,9 +59,17 @@ function following(fromUser, toUser, res, callback) {
   }
 }
 
+function cleanDate(d) {
+  if (d) {
+    return ago(d);
+  }
+  return d;
+}
+
 module.exports = {
   error: error,
   noExist: noExist,
   responsiveImg: responsiveImg,
-  following: following
+  following: following,
+  cleanDate: cleanDate
 };

@@ -21,6 +21,7 @@ var printError = require('./common.js').error;
 var printNoExist = require('./common.js').noExist;
 var responsiveImg = require('./common.js').responsiveImg;
 var following = require('./common.js').following;
+var cleanDate = require('./common.js').cleanDate;
 
 console.log('Connecting to MongoDB (required)');
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
@@ -91,6 +92,7 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
       user: user,
       images: images,
       saved: saved,
+      posted: cleanDate(user.posted),
       forUser: req.user,
       csrfToken: req.csrfToken()
     });
@@ -121,6 +123,7 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
           user: user,
           images: images,
           saved: [],
+          posted: cleanDate(user.posted),
           forUser: (req.user || null),
           following: following,
           csrfToken: req.csrfToken()

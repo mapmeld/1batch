@@ -1,95 +1,73 @@
-doctype
-html
-  head
-    meta(charset="utf-8")
-    title 1batch
-    link(rel="stylesheet", type="text/css", href="/lib/bootstrap.min.css")
-    link(rel="stylesheet", type="text/css", href="/1batch.css")
-  body
-    input.csrf(type="hidden", value=csrfToken)
-    input.username(type="hidden", value=user.name)
-    .container
-      .row
-        .col-sm-12
-          h1
-            span 1batch&nbsp;
-            small is an app for sharing 8 photos.
-            if !forUser
-              a.btn.btn-primary.pull-right(href="/profile") Log In
-            else
-              a.pull-right(href="/logout")
-                button.btn.btn-inverse.pull-right Log Out
+extends ./layout.jade
 
-      .row
-        .col-sm-12.col-md-6
-          h1= user.name
-          if posted
-            h4 posted #{posted}
-          else
-            if forUser && user.name == forUser.name
-              h4 You haven't posted yet!
-            else
-              h4 hasn't posted yet!
-          if forUser
-            if forUser.name !== user.name
-              if following
-                button.btn.btn-danger.follow Unfollow
-              else
-                button.btn.btn-success.follow Follow
+block content
+  input.csrf(type="hidden", value=csrfToken)
+  input.username(type="hidden", value=user.name)
+
+  .row
+    .col-sm-12.col-md-6
+      h1= user.name
       if posted
-        .row.profilephotos
-          for index in [0, 1, 2, 3]
-            if index < images.length
-              .col-sm-6.col-lg-3
-                a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
-                  img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
-        .row.profilephotos
-          for index in [4, 5, 6, 7]
-            if index < images.length
-              .col-sm-6.col-lg-3
-                a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
-                  img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
+        h4 posted #{posted}
       else
         if forUser && user.name == forUser.name
-          .row
-            .col-sm-12.col-md-6
-              form.well(action="/upload?_csrf=#{csrfToken}", method="POST", enctype="multipart/form-data")
-                label Upload a photo that you might use. You can change your mind before posting.
-                hr
-                input(type="file", name="upload")
-                button.btn.btn-success.pull-right Upload
-                .clearfix
-          .row
-            .col-sm-12.savedphotos
-              if saved.length
-                h4
-                  span Saved images (
-                  span.pickcount
-                  span &nbsp;/ 8 picked)
-                for image in saved
-                  .col-sm-6.col-lg-4
-                    a.pcon(href="javascript:void(0);", class="#{image.picked ? 'picked' : ''}")
-                      img(id=image._id, src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x")
-                      span.pick
-                        if !image.picked
-                          button Pick &check;
-                        else
-                          button Remove x
-              else
-                p No images uploaded yet...
-          if saved.length
-            .row
-              .col-sm-12.postnow
-                hr
-                button.btn.btn-success Publish Picked Photos
-
+          h4 You haven't posted yet!
+        else
+          h4 hasn't posted yet!
+      if forUser
+        if forUser.name !== user.name
+          if following
+            button.btn.btn-danger.follow Unfollow
+          else
+            button.btn.btn-success.follow Follow
+  if posted
+    .row.profilephotos
+      for index in [0, 1, 2, 3]
+        if index < images.length
+          .col-sm-6.col-lg-3
+            a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
+              img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
+    .row.profilephotos
+      for index in [4, 5, 6, 7]
+        if index < images.length
+          .col-sm-6.col-lg-3
+            a.pcon(href="/#{user.name}/photo/#{images[index]._id}")
+              img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
+  else
+    if forUser && user.name == forUser.name
       .row
-        .col-sm-12
-          hr
-          small
-            span 1batch is&nbsp;
-            a(href="https://github.com/mapmeld/1batch") open source
+        .col-sm-12.col-md-6
+          form.well(action="/upload?_csrf=#{csrfToken}", method="POST", enctype="multipart/form-data")
+            label Upload a photo that you might use. You can change your mind before posting.
+            hr
+            input(type="file", name="upload")
+            button.btn.btn-success.pull-right Upload
+            .clearfix
+      .row
+        .col-sm-12.savedphotos
+          if saved.length
+            h4
+              span Saved images (
+              span.pickcount
+              span &nbsp;/ 8 picked)
+            for image in saved
+              .col-sm-6.col-lg-4
+                a.pcon(href="javascript:void(0);", class="#{image.picked ? 'picked' : ''}")
+                  img(id=image._id, src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x")
+                  span.pick
+                    if !image.picked
+                      button Pick &check;
+                    else
+                      button Remove x
+          else
+            p No images uploaded yet...
+      if saved.length
+        .row
+          .col-sm-12.postnow
+            hr
+            button.btn.btn-success Publish Picked Photos
 
-    script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
-    script(type="text/javascript", src="/follow-button.js")
-    script(type="text/javascript", src="/image-select.js")
+block scripts
+  script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
+  script(type="text/javascript", src="/follow-button.js")
+  script(type="text/javascript", src="/image-select.js")

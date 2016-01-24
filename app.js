@@ -106,9 +106,16 @@ app.get('/feed', middleware, csrfProtection, function (req, res) {
       if (err) {
         return printError(err, res);
       }
-      res.render('feed', {
-        follows: follows,
-        forUser: req.user
+      var permDate = new Date((new Date()) - 60 * 60 * 1000);
+      User.find({ published: { $ne: null, $lt: permDate } }).sort('-published').limit(6).exec(function (err, publishers) {
+        if (err) {
+          return printError(err, res);
+        }
+        res.render('feed', {
+          follows: follows,
+          forUser: req.user,
+          publishers: publishers
+        });
       });
     });
   } else {
@@ -161,7 +168,7 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
       return printNoExist(res);
     }
 
-    function showImage(following) {
+    function showImage(userFollowsSource, sourceFollowsUser) {
       Image.findOne({ _id: req.params.photoid }, '_id src comments caption hidden published', function (err, image) {
         if (err) {
           return printError(err, res);
@@ -172,18 +179,25 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
         if ((req.user.name !== user.name) && (image.hidden || !image.published)) {
           return printNoExist(res);
         }
+        comments = image.comments || [];
         image = responsiveImg(image, true);
         res.render('image', {
           user: user,
           image: image,
+          comments: comments,
           posted: cleanDate(user.posted),
           forUser: (req.user || null),
-          csrfToken: req.csrfToken()
+          csrfToken: req.csrfToken(),
+          canComment: (req.user.name === user.name) || userFollowsSource || sourceFollowsUser
         });
       });
     }
 
-    following(req.user, user, res, showImage);
+    following(req.user, user, res, function (userFollowsSource) {
+      following(user, req.user, res, function (sourceFollowsUser) {
+        showImage(userFollowsSource, sourceFollowsUser);
+      });
+    });
   });
 });
 
@@ -341,6 +355,48 @@ app.post('/publish', middleware, csrfProtection, function (req, res) {
       });
     });
   }
+});
+
+// comment on photo
+app.post('/comment', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    // log in first
+    return res.redirect('/login');
+  }
+  Image.findById(req.body.id, function (err, img) {
+    if (err) {
+      return printError(err, res);
+    }
+    if (!img || img.hidden || !img.published) {
+      return printNoExist(err, res);
+    }
+    User.findOne({ name: img.user_id }, function (err, user) {
+      if (err) {
+        return printError(err, res);
+      }
+      if (!user) {
+        return printNoExist(err, res);
+      }
+      following(req.user, user, res, function (userFollowsSource) {
+        following(user, req.user, res, function (sourceFollowsUser) {
+          if ((req.user.name === user.name) || userFollowsSource || sourceFollowsUser) {
+            if (!img.comments) {
+              img.comments = [];
+            }
+            img.comments.push({ user: user.name, text: req.body.text.trim() });
+            img.save(function (err){
+              if (err) {
+                return printError(err, res);
+              }
+              res.redirect('/' + user.name + '/photo/' + req.body.id);
+            });
+          } else {
+            return printError('you can\'t comment', res);
+          }
+        });
+      });
+    });
+  });
 });
 
 app.listen(process.env.PORT || 8080, function() { });

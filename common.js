@@ -34,7 +34,7 @@ function responsiveImg(img, isBig) {
 
 // multiple outcomes for follow-check
 function following(fromUser, toUser, res, callback) {
-  if (fromUser) {
+  if (fromUser && toUser) {
     Follow.findOne({ start_user_id: fromUser.name, end_user_id: toUser.name }, function (err, f) {
       if (err) {
         // error occurred

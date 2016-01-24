@@ -155,3 +155,7 @@ img.hidemark {
   border: #f00;
   opacity: 0.5;
 }
+
+button.commenter {
+  margin-top: 10px;
+}

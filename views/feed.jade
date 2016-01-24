@@ -8,8 +8,8 @@ block content
       else
         a.btn.btn-primary.pull-right(href="/profile") Log In
       h2
-        span 1batch&nbsp;
-        small an app for sharing 8 photos.
+        a(href="/") 1batch
+        small &nbsp;an app for sharing 8 photos.
   .row
     .col-sm-12.col-md-6
       a.btn.btn-success(href="/profile") Profile Page
@@ -23,3 +23,12 @@ block content
               a(href="/profile/#{follow.end_user_id}")= follow.end_user_id
       else
         h3 You don't follow any users.
+
+  if publishers.length
+    .row
+      .col-sm-12
+        h3 Recent publishes:
+        ul
+          for publisher in publishers
+            li
+              a(href="/profile/#{publisher}") #{publisher}

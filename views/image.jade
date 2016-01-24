@@ -54,17 +54,29 @@ block content
               br
               br
 
-    .row
-      .col-sm-12
-        form(action="/comment", method="POST")
-          textarea(name="text")
-          input(type="submit", value="POST")
+    if canComment
+      .row
+        .col-sm-6
+          form.well(action="/comment", method="POST")
+            input(type="hidden", name="_csrf", value="#{csrfToken}")
+            input(type="hidden", name="id", value="#{image._id}")
+            textarea.form-control(name="text")
+            button.btn.btn-primary.pull-right.commenter Post
+            .clearfix
 
   .row
-    .col-sm-12.comments
-      p Comments coming soon...
-
-block scripts
-  script(type="text/javascript") var comments = !{JSON.stringify(image.comments)};
-  script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
-  script(type="text/javascript", src="/comments.js")
+    .col-sm-6.comments
+      table.table.table-striped
+        for comment in comments
+          tr
+            if comment.user === user.name
+              th
+                a(href="/profile/#{comment.user}")
+                  span= comment.user
+                  span &nbsp(poster)
+              td
+                strong= comment.text
+            else
+              td
+                a(href="/profile/#{comment.user}")= comment.user
+              td= comment.text

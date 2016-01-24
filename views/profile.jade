@@ -56,9 +56,10 @@ block content
         .col-sm-12.savedphotos
           if saved.length
             h4
-              span Saved images (
+              span Stored images (
               span.pickcount
               span &nbsp;/ 8 picked)
+              small &nbsp;&nbsp;&nbsp;double-tap to pick
             for image in saved
               .col-sm-6.col-lg-4
                 a.pcon(href="javascript:void(0);", class="#{image.picked ? 'picked' : ''}")
@@ -72,15 +73,30 @@ block content
             p No images uploaded yet...
   if saved.length
     .row
-      .col-sm-12.postnow
-        hr
-        button.btn.btn-success Publish Picked Photos
+      .col-sm-12.postnow.well
+        p Once you've picked 1 to 8 photos that you really like, hit publish!
+        ul
+          li Your photos will be online for six months
+          li You can always hide or delete a photo
+          li You have one hour to redo if you change your mind
+        br
+        button.btn.btn-success
+          span Post Picked Photos (
+          span.pickcount
+          span )
   else
     if (posted && ((posted.indexOf('ms') > -1) || (posted.indexOf('minute') > -1) || (posted.indexOf('second') > -1)))
       .row
-        .col-sm-12.postnow
-          hr
+        .col-sm-12.postnow.well
+          ul
+            li For one hour you have the option to unpublish / redo your post
+            li You can always hide or delete a photo
+          br
           button.btn.btn-danger.unpublish Unpublish Photos
+    if forUser && forUser.name === user.name && posted
+      .row
+        .col-sm-12.well
+          p Click a photo to go to its photo page. You can leave comments, hide it, or remove it.
 
 block scripts
   script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")

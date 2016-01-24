@@ -21,7 +21,7 @@ html
       .row
         .col-sm-12
           hr
-          img.bigimage(src=image.src)
+          img.bigimage(src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x")
 
       if presentUser
         .row

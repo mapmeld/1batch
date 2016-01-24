@@ -49,18 +49,13 @@ module.exports = function (app, csrfProtection) {
           i.test = false;
           i.user_id = req.user.name;
           i.src = result.public_id;
+          i.published = false;
+          i.picked = false;
           i.save(function(err) {
             if (err) {
               return commonResponses.error(err, res);
             }
-            req.user.images.push(result.public_id);
-            req.user.imageids.push(i._id);
-            req.user.save(function(err) {
-              if (err) {
-                return commonResponses.error(err, res);
-              }
-              res.redirect('/profile');
-            });
+            res.redirect('/profile');
           });
         }, { public_id: Math.random() + "_" + (new Date() * 1) } );
         file.pipe(stream);

@@ -24,7 +24,7 @@ html
           if user.posted
             h4 posted #{user.posted.toISOString()}
           else
-            if forUser && user._id == forUser._id
+            if forUser && user.name == forUser.name
               h4 You haven't posted yet!
             else
               h4 hasn't posted yet!
@@ -41,16 +41,18 @@ html
       if user.posted
         .row.profilephotos
           for index in [0, 1, 2, 3]
-            .col-sm-6.col-lg-3
-              a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
-                img(src=images[index].main, srcset="#{images[index].main} 1x, #{images[index].retina} 2x")
+            if index < images.length
+              .col-sm-6.col-lg-3
+                a(href="/#{user.name}/photo/#{images[index]._id}").pcon
+                  img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
         .row.profilephotos
           for index in [4, 5, 6, 7]
-            .col-sm-6.col-lg-3
-              a(href="/#{user.name}/photo/#{user.imageids[index]}").pcon
-                img(src=images[index].main, srcset="#{images[index].main} 1x, #{images[index].retina} 2x")
+            if index < images.length
+              .col-sm-6.col-lg-3
+                a(href="/#{user.name}/photo/#{images[index]._id}").pcon
+                  img(src=images[index].src.main, srcset="#{images[index].src.main} 1x, #{images[index].src.retina} 2x", class="#{images[index].hidden ? 'hidden' : ''}")
       else
-        if forUser && user._id == forUser._id
+        if forUser && user.name == forUser.name
           .row
             .col-sm-12
               form.well(action="/upload?_csrf=#{csrfToken}", method="POST", enctype="multipart/form-data")
@@ -59,11 +61,11 @@ html
                 br
                 button.btn.btn-success Upload
           .row
-            .col-sm-12
-              if images.length
+            .col-sm-12.savedphotos
+              if saved.length
                 p Saved images
-                for image in images
-                  img(src=image.main, srcset="#{image.main} 1x, #{image.retina} 2x")
+                for image in saved
+                  img(src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x", class="#{image.picked ? 'picked' : ''}")
               else
                 p No images uploaded yet... try some!
 
@@ -74,4 +76,5 @@ html
             span 1batch is&nbsp;
             a(href="https://github.com/mapmeld/1batch") open source
 
+    script(type="text/javascript", src="/lib/jquery-1.11.3.min.js")
     script(type="text/javascript", src="/image-select.js")

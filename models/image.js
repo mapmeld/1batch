@@ -8,7 +8,9 @@ var imageSchema = mongoose.Schema({
   comments: [String],
   hidden: Boolean,
   test: Boolean,
-  caption: String
+  caption: String,
+  published: Boolean,
+  picked: Boolean
 });
 
 module.exports = mongoose.model('Image', imageSchema);

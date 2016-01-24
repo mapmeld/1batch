@@ -51,36 +51,58 @@ app.get('/', function (req, res) {
 });
 
 app.get('/:username/photo/:photoid', csrfProtection, function (req, res) {
-  User.findOne({ name: req.params.username }, function (err, user) {
+  User.findOne({ name: req.params.username.toLowerCase() }, function (err, user) {
     if (err) {
       return printError(err, res);
     }
     if (!user) {
       return printNoExist(res);
     }
-    Image.findOne({ _id: req.params.photoid, hidden: false }, function (err, image) {
-      if (err) {
-        return printError(err, res);
-      }
-      if (!image) {
-        return printNoExist(res);
-      }
-      image.src = responsiveImg(image.src, true);
-      res.render('image', {
-        user: user,
-        image: image,
-        forUser: (req.user || null),
-        csrfToken: req.csrfToken()
+
+    function showImage(following) {
+      Image.findOne({ _id: req.params.photoid, hidden: false, published: true }, '_id src comments caption', function (err, image) {
+        if (err) {
+          return printError(err, res);
+        }
+        if (!image) {
+          return printNoExist(res);
+        }
+        image = responsiveImg(image, true);
+        res.render('image', {
+          user: user,
+          image: image,
+          forUser: (req.user || null),
+          csrfToken: req.csrfToken()
+        });
       });
-    });
+    }
+
+    if (req.user) {
+      Follow.findOne({ start_user_id: req.user.name, end_user_id: user.name }, function (err, f) {
+        if (err) {
+          return printError(err, res);
+        }
+        if (f) {
+          if (f.blocked) {
+            return printNoExist(res);
+          } else {
+            return showImage(true);
+          }
+        } else {
+          return showImage(false);
+        }
+      });
+    } else {
+      showImage(false);
+    }
   });
 });
 
 app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
-  if (req.user && req.params.username === req.user.name) {
+  if (req.user && req.params.username.toLowerCase() === req.user.name) {
     return res.redirect('/profile');
   }
-  User.findOne({ name: req.params.username }, function (err, user) {
+  User.findOne({ name: req.params.username.toLowerCase() }, '_id name posted', function (err, user) {
     if (err) {
       return printError(err, res);
     }
@@ -89,13 +111,19 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
     }
 
     function showProfile(following) {
-      var images = user.images.map(responsiveImg);
-      res.render('profile', {
-        user: user,
-        images: images,
-        forUser: (req.user || null),
-        following: following,
-        csrfToken: req.csrfToken()
+      Image.find({ published: true, hidden: false, user_id: user.name }).select('_id src').exec(function (err, images) {
+        if (err) {
+          return printError(err, res);
+        }
+        images = images.map(responsiveImg);
+        res.render('profile', {
+          user: user,
+          images: images,
+          saved: [],
+          forUser: (req.user || null),
+          following: following,
+          csrfToken: req.csrfToken()
+        });
       });
     }
     if (req.user) {
@@ -124,12 +152,28 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
     return res.redirect('/login');
   }
   var user = req.user;
-  var images = user.images.map(responsiveImg);
-  res.render('profile', {
-    user: user,
-    images: images,
-    forUser: req.user,
-    csrfToken: req.csrfToken()
+  Image.find({ user_id: user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
+    if (err) {
+      return printError(err, res);
+    }
+
+    var images = [];
+    var saved = [];
+    allimages.map(function(img) {
+      if (img.published) {
+        images.push(responsiveImg(img));
+      } else {
+        saved.push(responsiveImg(img));
+      }
+    });
+
+    res.render('profile', {
+      user: user,
+      images: images,
+      saved: saved,
+      forUser: req.user,
+      csrfToken: req.csrfToken()
+    });
   });
 });
 

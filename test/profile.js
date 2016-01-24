@@ -16,12 +16,14 @@ function createUser(username, callback) {
   });
 }
 
-function createImage(user, publish, callback) {
+function createImage(username, publish, callback) {
   var i = new Image();
   i.test = true;
-  i.user_id = user._id;
+  i.user_id = username;
   i.src = 'http://example.com';
-  i.hidden = !publish;
+  i.hidden = false;
+  i.published = publish;
+  i.picked = false;
   i.save(function(err) {
     callback(err || null, i);
   });
@@ -93,7 +95,7 @@ describe('photo uploaded', function() {
       if (err) {
         return done(err);
       }
-      createImage(user, false, function(err) {
+      createImage('test', false, function(err) {
         if (err) {
           return done(err);
         }
@@ -110,12 +112,10 @@ describe('photo uploaded', function() {
       if (err) {
         return done(err);
       }
-      createImage(user, true, function(err, img) {
+      createImage('test', true, function(err, img) {
         if (err) {
           return done(err);
         }
-        user.images = [img.src];
-        user.imageids = [img._id];
         user.posted = new Date();
         user.save(function(err) {
           if (err) {
@@ -136,12 +136,10 @@ describe('photo uploaded', function() {
       if (err) {
         return done(err);
       }
-      createImage(user, true, function(err, img) {
+      createImage('test', true, function(err, img) {
         if (err) {
           return done(err);
         }
-        user.images = [img.src];
-        user.imageids = [img._id];
         user.posted = new Date();
         user.save(function(err) {
           if (err) {

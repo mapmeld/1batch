@@ -3,14 +3,18 @@ extends ./layout.jade
 block content
   .row
     .col-sm-12
-      h1
-        span 1batch&nbsp;
-        small is an app for sharing 8 photos.
+      h2
+        a(href="/feed") 1batch
+        small &nbsp;an app for sharing 8 photos.
+      if forUser
+        a.btn.btn-inverse.pull-right(href="/logout") Log Out
+      else
+        a.btn.btn-primary.pull-right(href="/profile") Log In
   .row
     .col-sm-12.col-md-6
-      h1= user.name
-      h4 posted #{user.posted.toISOString()}
-
+      h1
+        a(href="/profile/#{user.name}") #{user.name}
+      h4 posted #{posted}
 
   .row
     .col-sm-12

@@ -71,7 +71,8 @@ html, body {
 }
 
 .bigimage {
-
+  max-width: 100%;
+  height: auto;
 }
 
 .comment {
@@ -135,4 +136,8 @@ a button:hover {
 
 .pcon.picked .pick button {
   background: red;
+}
+
+h1 a, h2 a, h1 a:hover, h2 a:hover {
+  color: #000;
 }

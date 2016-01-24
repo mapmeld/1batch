@@ -99,6 +99,22 @@ app.get('/profile', middleware, csrfProtection, function (req, res) {
   });
 });
 
+// friends' photos
+app.get('/feed', middleware, csrfProtection, function (req, res) {
+  if (req.user) {
+    Follow.find({ start_user_id: req.user.name, blocked: false }, function (err, follows) {
+      if (err) {
+        return printError(err, res);
+      }
+      res.render('feed', {
+        follows: follows
+      });
+    });
+  } else {
+    res.redirect('/');
+  }
+});
+
 // someone else's profile
 app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
   if (req.user && req.params.username.toLowerCase() === req.user.name) {
@@ -156,6 +172,7 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
         res.render('image', {
           user: user,
           image: image,
+          posted: cleanDate(user.posted),
           forUser: (req.user || null),
           csrfToken: req.csrfToken()
         });

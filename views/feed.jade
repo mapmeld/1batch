@@ -1,0 +1,21 @@
+extends ./layout.jade
+
+block content
+  .row
+    .col-sm-12
+      h2
+        span 1batch&nbsp;
+        small an app for sharing 8 photos.
+      if forUser
+        a.btn.btn-inverse.pull-right(href="/logout") Log Out
+      else
+        a.btn.btn-primary.pull-right(href="/profile") Log In
+  .row
+    .col-sm-12.col-md-6
+      if follows.length
+        ul
+          for follow in follows
+            li
+              a(href="/profile/#{follow.end_user_id}")= follow.end_user_id
+      else
+        h3 You don't follow any users.

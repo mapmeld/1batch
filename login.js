@@ -93,7 +93,7 @@ var setupAuth = function (app, csrfProtection) {
   } else {
     passport.use(new Strategy(
       function(username, password, cb) {
-        User.findOne({ name: username }, function(err, user) {
+        User.findOne({ name: username.toLowerCase() }, function(err, user) {
           if (err) { return cb(err); }
           if (!user) { return cb(null, false); }
           if (user.localpass != password) { return cb(null, false); }

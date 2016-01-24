@@ -1,4 +1,3 @@
-fix login vs register
 tests sign in and test visibility
 hide, follow, block tests
 captioning?

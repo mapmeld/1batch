@@ -20,19 +20,15 @@ block content
   else
     .row
       .col-sm-12.col-md-6
-        if !newuser
-          .well
-            span No account?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            a(href="/register").btn.btn-primary Sign Up
-        form.well(action="/login", method="POST")
-          if newuser
-            p You created your account! Now enter your password:
-          else
-            p Let's get you logged in.
+        form.well(action="/register", method="POST")
+          p Let's sign you up.
           label Username
-          input(type="text", name="username", value=newuser)
+          input(type="text", name="username")
           label Password
           input(type="password", name="password")
           br
-          input(type="hidden", name="_csrf", value=csrfToken)
-          button.btn.btn-primary Log In
+          input(type="hidden", name="_csrf", value="#{csrfToken}")
+          button.btn.btn-success Register New User
+        .well
+          span Already have an account?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          a(href="/login").btn.btn-info Log In

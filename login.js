@@ -19,6 +19,16 @@ var setupAuth = function (app, csrfProtection) {
   app.get('/login', csrfProtection, function (req, res) {
     res.render('login', {
       forUser: req.user,
+      csrfToken: req.csrfToken(),
+      newuser: req.query.user
+    });
+  });
+
+  app.get('/register', csrfProtection, function (req, res) {
+    if (req.user) {
+      return res.redirect('/login');
+    }
+    res.render('register', {
       csrfToken: req.csrfToken()
     });
   });
@@ -47,7 +57,7 @@ var setupAuth = function (app, csrfProtection) {
         if (err) {
           return printError(err, res);
         }
-        res.redirect('/login');
+        res.redirect('/login?user=' + u.name);
       });
     });
   });

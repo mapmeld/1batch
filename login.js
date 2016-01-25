@@ -7,7 +7,7 @@ const printError = require('./common.js').error;
 
 var middleware = function(req, res, next) {
   if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET) {
-    passport.authenticate('google', { scope: ['email'] })(req, res, next);
+    next();
   } else {
     passport.authenticate('local', function(err, user, info) {
       req.authenticated = !! user;
@@ -122,14 +122,6 @@ var setupAuth = function (app, csrfProtection) {
         res.redirect('/login?user=' + u.name);
       });
     });
-  });
-
-  app.post('/login', passport.authenticate('local', { failureRedirect: '/login' }), csrfProtection, function (req, res) {
-    if (req.user.posted) {
-      res.redirect('/feed');
-    } else {
-      res.redirect('/profile');
-    }
   });
 
   app.get('/logout', middleware, csrfProtection, function (req, res) {

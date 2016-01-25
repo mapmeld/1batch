@@ -5,7 +5,7 @@ var mongoose = require('mongoose');
 var userSchema = mongoose.Schema({
   name: String,
   localpass: String,
-  id: String,
+  googid: String,
   posted: Date,
   test: Boolean
 });

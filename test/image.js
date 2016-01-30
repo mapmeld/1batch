@@ -9,6 +9,7 @@ const wrapup = require('./common.js').wrapup;
 
 describe('photo page', function() {
   it('is invisible until user has published', function(done) {
+    this.timeout(4000);
     createUser('test', function(err, user) {
       if (err) {
         return wrapup(done, err);
@@ -26,6 +27,7 @@ describe('photo page', function() {
   });
 
   it('gets its own page once user has published', function(done) {
+    this.timeout(4000);
     createUser('test', function(err, user) {
       if (err) {
         return wrapup(done, err);

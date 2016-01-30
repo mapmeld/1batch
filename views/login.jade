@@ -22,7 +22,8 @@ block content
       .col-sm-12.col-md-6
         if googly
           .well
-            a.btn.btn-primary(href="/auth/google") Google Auth
+            a(href="/auth/google")
+              img(src="/images/btn_google_signin_dark_normal_web.png")
         else
           if newuser
             p You created your account! Now enter your password:

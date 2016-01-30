@@ -15,6 +15,13 @@ function noExist(res) {
 // break an image into multiple sizes
 function responsiveImg(img, isBig) {
   var baseSize = 300;
+  var geturl = cloudinary.url;
+  if (!process.env.CLOUDINARY_URL && !process.env.CLOUD_NAME && !process.env.CLOUDINARY_API_KEY && !process.env.CLOUDINARY_API_SECRET) {
+    // test instance
+    geturl = function(url) {
+      return url;
+    }
+  }
   if (isBig) {
     baseSize *= 2;
   }
@@ -24,9 +31,9 @@ function responsiveImg(img, isBig) {
     published: img.published,
     hidden: img.hidden,
     src: {
-      mini: cloudinary.url(img.src, { format: "jpg", width: baseSize * 2/3, height: baseSize * 2/3, crop: "fill" }),
-      main: cloudinary.url(img.src, { format: "jpg", width: baseSize, height: baseSize, crop: "fill" }),
-      retina: cloudinary.url(img.src, { format: "jpg", width: baseSize * 2, height: baseSize * 2, crop: "fill" })
+      mini: geturl(img.src, { format: "jpg", width: baseSize * 2/3, height: baseSize * 2/3, crop: "fill" }),
+      main: geturl(img.src, { format: "jpg", width: baseSize, height: baseSize, crop: "fill" }),
+      retina: geturl(img.src, { format: "jpg", width: baseSize * 2, height: baseSize * 2, crop: "fill" })
     }
   };
   return out;

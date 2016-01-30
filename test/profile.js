@@ -15,6 +15,18 @@ describe('profile page visibility', function() {
     });
   });
 
+  it('doesn\'t show e-mail profiles', function(done) {
+    createUser('nick@1batch.co', function(err) {
+      if (err) {
+        return wrapup(done, err);
+      }
+      requestProfile('nick@1batch.co', done, function(res) {
+        assert.include(res.text, 'can\'t find that user');
+        wrapup(done);
+      });
+    });
+  });
+
   it('shows user name but no photos', function(done) {
     createUser('test', function(err) {
       if (err) {

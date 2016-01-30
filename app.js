@@ -66,8 +66,10 @@ app.get('/profile', function (req, res, next) {
     // log in first
     return res.redirect('/login');
   }
-  var user = req.user;
-  Image.find({ user_id: user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
+  if (!req.user.name || req.user.name.indexOf('@') > -1) {
+    return res.redirect('/changename');
+  }
+  Image.find({ user_id: req.user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
     if (err) {
       return printError(err, res);
     }
@@ -81,7 +83,7 @@ app.get('/profile', function (req, res, next) {
         saved.push(responsiveImg(img));
       }
     });
-    if (user.posted) {
+    if (req.user.posted) {
       // once user posts, end photo-picking
       saved = [];
     }
@@ -96,10 +98,10 @@ app.get('/profile', function (req, res, next) {
     });
 
     res.render('profile', {
-      user: user,
+      user: req.user,
       images: images,
       saved: saved,
-      posted: cleanDate(user.posted),
+      posted: cleanDate(req.user.posted),
       forUser: req.user,
       csrfToken: req.csrfToken()
     });
@@ -135,6 +137,9 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
   if (req.user && req.params.username.toLowerCase() === req.user.name) {
     // redirect to your own profile
     return res.redirect('/profile');
+  }
+  if (req.params.username.indexOf('@') > -1) {
+    return printNoExist(res);
   }
   User.findOne({ name: req.params.username.toLowerCase() }, '_id name posted', function (err, user) {
     if (err) {
@@ -183,8 +188,10 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
         if (!image) {
           return printNoExist(res);
         }
-        if ((!req.user || (req.user.name !== user.name)) && (image.hidden || !image.published)) {
-          return printNoExist(res);
+        if (!req.user || req.user.name !== user.name) {
+          if (image.hidden || !image.published) {
+            return printNoExist(res);
+          }
         }
         comments = image.comments || [];
         image = responsiveImg(image, true);

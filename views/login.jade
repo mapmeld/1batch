@@ -20,16 +20,19 @@ block content
   else
     .row
       .col-sm-12.col-md-6
-        //
-          if !newuser
-            .well
-              span No account?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              a(href="/register").btn.btn-primary Sign Up
+        if !newuser
+          .well
+            span No account?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            a(href="/register").btn.btn-primary Sign Up
+        if newuser
+          p You created your account! Now enter your password:
+        else
+          p Let's get you logged in.
+        if googly
+          .well
+            a.btn.btn-primary(href="/auth/google") Google Auth
+        else
           form.well(action="/login", method="POST")
-            if newuser
-              p You created your account! Now enter your password:
-            else
-              p Let's get you logged in.
             label Username
             input(type="text", name="username", value=newuser)
             label Password
@@ -37,4 +40,3 @@ block content
             br
             input(type="hidden", name="_csrf", value=csrfToken)
             button.btn.btn-primary Log In
-        a.btn.btn-primary(href="/auth/google") Google Auth

@@ -82,7 +82,8 @@ var setupAuth = function (app, csrfProtection) {
     res.render('login', {
       forUser: req.user,
       csrfToken: req.csrfToken(),
-      newuser: req.query.user
+      newuser: req.query.user,
+      googly: (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET)
     });
   });
 

@@ -1,12 +1,14 @@
 const passport = require('passport');
 const Strategy = require('passport-local').Strategy;
-const GoogleStrategy = require('passport-google-oauth2').Strategy;
+const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
 
 const User = require('./models/user.js');
 const printError = require('./common.js').error;
 
 var middleware = function(req, res, next) {
   if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET) {
+    //console.log('middleware next');
+    //passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(req, res, next);
     next();
   } else {
     passport.authenticate('local', function(err, user, info) {
@@ -14,6 +16,11 @@ var middleware = function(req, res, next) {
       next();
     })(req, res, next);
   }
+};
+
+var confirmLogin = function (req, res, next) {
+  // this runs once, after the callback from Google
+  passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(req, res, next);
 };
 
 var setupAuth = function (app, csrfProtection) {
@@ -64,21 +71,16 @@ var setupAuth = function (app, csrfProtection) {
       })
     );
 
-    passport.serializeUser(function(user, cb) {
-      cb(null, user._id);
+    passport.serializeUser(function(user, done) {
+      done(null, user);
     });
 
-    passport.deserializeUser(function(id, cb) {
-      User.findById(id, function (err, user) {
-        if (err) {
-          return cb(err);
-        }
-        cb(null, user);
-      });
+    passport.deserializeUser(function(obj, done) {
+      done(null, obj);
     });
   }
 
-  app.get('/login', middleware, csrfProtection, function (req, res) {
+  app.get('/login', csrfProtection, function (req, res) {
     res.render('login', {
       forUser: req.user,
       csrfToken: req.csrfToken(),
@@ -135,5 +137,6 @@ var setupAuth = function (app, csrfProtection) {
 
 module.exports = {
   middleware: middleware,
-  setupAuth: setupAuth
+  setupAuth: setupAuth,
+  confirmLogin: confirmLogin
 };

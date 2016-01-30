@@ -15,6 +15,7 @@ const Follow = require('./models/following.js');
 
 var setupAuth = require('./login.js').setupAuth;
 var middleware = require('./login.js').middleware;
+var confirmLogin = require('./login.js').confirmLogin;
 var setupUploads = require('./uploads.js');
 
 var printError = require('./common.js').error;
@@ -54,7 +55,13 @@ app.get('/', function (req, res) {
 });
 
 // your own profile
-app.get('/profile', middleware, csrfProtection, function (req, res) {
+app.get('/profile', function (req, res, next) {
+  if (req.query.justLoggedIn) {
+    return confirmLogin(req, res, next);
+  } else {
+    return middleware(req, res, next);
+  }
+}, csrfProtection, function (req, res) {
   if (!req.user) {
     // log in first
     return res.redirect('/login');

@@ -111,6 +111,10 @@ a button:hover {
   border-radius: 18px;
 }
 
+.savedphotos .pcon img {
+  border-radius: 18px;
+}
+
 .pcon.picked, .pcon.maybe-pick {
   border: 1px solid blue;
 }

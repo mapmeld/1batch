@@ -39,6 +39,9 @@ var setupAuth = function (app, csrfProtection) {
           if (!user) {
             user = new User();
             user.googid = profile.id;
+            user.name = profile.email;
+            user.test = false;
+            user.republish = false;
             user.save(function() {
               return done(err, user);
             });
@@ -125,6 +128,7 @@ var setupAuth = function (app, csrfProtection) {
       u.name = req.body.username.toLowerCase();
       u.localpass = req.body.password;
       u.test = false;
+      u.republish = false;
       u.save(function (err) {
         if (err) {
           return printError(err, res);

@@ -7,7 +7,8 @@ var userSchema = mongoose.Schema({
   localpass: String,
   googid: String,
   posted: Date,
-  test: Boolean
+  test: Boolean,
+  republish: Boolean
 });
 
 module.exports = mongoose.model('OBUser', userSchema);

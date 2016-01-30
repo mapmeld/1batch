@@ -69,6 +69,22 @@ app.get('/profile', function (req, res, next) {
   if (!req.user.name || req.user.name.indexOf('@') > -1) {
     return res.redirect('/changename');
   }
+  if (!req.user.republish && req.user.posted && (new Date() - req.user.posted) > 6 * 30 * 24 * 60 * 60 * 1000) {
+    // >180 days ago!
+    return User.findById(req.user._id, function (err, user) {
+      if (err) {
+        return printError(err, res);
+      }
+      user.republish = true;
+      req.user.republish = true;
+      user.save(function (err) {
+        if (err) {
+          return printError(err, res);
+        }
+        res.redirect('/profile');
+      });
+    });
+  }
   Image.find({ user_id: req.user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
     if (err) {
       return printError(err, res);
@@ -83,7 +99,7 @@ app.get('/profile', function (req, res, next) {
         saved.push(responsiveImg(img));
       }
     });
-    if (req.user.posted) {
+    if (req.user.posted && !req.user.republish) {
       // once user posts, end photo-picking
       saved = [];
     }
@@ -104,6 +120,53 @@ app.get('/profile', function (req, res, next) {
       posted: cleanDate(req.user.posted),
       forUser: req.user,
       csrfToken: req.csrfToken()
+    });
+  });
+});
+
+app.get('/changename', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    return res.redirect('/login');
+  }
+  if (req.user.name && req.user.name.indexOf('@') === -1) {
+    return res.redirect('/profile');
+  }
+  res.render('changename', {
+    forUser: req.user,
+    csrfToken: req.csrfToken()
+  });
+});
+
+app.post('/changename', middleware, csrfProtection, function (req, res) {
+  if (!req.user) {
+    return res.redirect('/login');
+  }
+  if (req.user.name && req.user.name.indexOf('@') > -1) {
+    return res.redirect('/profile');
+  }
+  var newname = req.body.newname.toLowerCase();
+  if (!newname || newname.indexOf('@') > -1) {
+    return res.redirect('/changename');
+  }
+  User.find({ name: newname }, function (err, users) {
+    if (err) {
+      return printError(res, err);
+    }
+    if (users.length) {
+      return printError(res, 'someone already has that username');
+    }
+    User.findById(req.user._id, function (err, user) {
+      if (err) {
+        return printError(res, err);
+      }
+      req.user.name = newname;
+      user.name = newname;
+      user.save(function (err) {
+        if (err) {
+          return printError(res, err);
+        }
+        res.redirect('/profile');
+      });
     });
   });
 });
@@ -224,6 +287,9 @@ app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
   }
   if (req.user.name === req.params.end_user) {
     return printError('you can\'t follow yourself', res);
+  }
+  if (req.params.end_user.indexOf('@') > -1) {
+    return printNoExist(res);
   }
   Follow.findOne({ start_user_id: req.user.name, end_user_id: req.params.end_user }, function (err, existing) {
     if (err) {

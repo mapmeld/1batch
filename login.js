@@ -53,7 +53,7 @@ var setupAuth = function (app, csrfProtection) {
       {
         clientID: process.env.GOOGLE_CONSUMER_KEY,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: 'http://1batch.co/profile?justLoggedIn=true',
+        callbackURL: 'https://1batch.co/profile?justLoggedIn=true',
         passReqToCallback: true
       },
       function(request, accessToken, refreshToken, profile, done) {

@@ -20,24 +20,24 @@ block content
   else
     .row
       .col-sm-12.col-md-6
-        if googly
-          .well
-            p Use one of your accounts to sign in:
-            a(href="/auth/google")
-              img(src="/images/btn_google_signin_dark_normal_web.png", alt="Sign in with Google")
+        if newuser
+          p You created your account! Now enter your password:
         else
-          if newuser
-            p You created your account! Now enter your password:
-          else
+          p Choose a method to sign in:
+          if googly
             .well
-              span No account?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              a(href="/register").btn.btn-primary Sign Up
-            p Let's get you logged in.
-          form.well(action="/login", method="POST")
-            label Username
-            input(type="text", name="username", value=newuser)
-            label Password
-            input(type="password", name="password")
-            br
-            input(type="hidden", name="_csrf", value=csrfToken)
-            button.btn.btn-primary Log In
+              a(href="/auth/google")
+                img(src="/images/btn_google_signin_dark_normal_web.png", alt="Sign in with Google")
+                  
+          .well
+            span Or just username / password:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            a(href="/register").btn.btn-primary Register
+        form.well(action="/login", method="POST")
+          h4 1batch username / password:
+          label Username
+          input(type="text", name="username", value=newuser)
+          label Password
+          input(type="password", name="password")
+          br
+          input(type="hidden", name="_csrf", value=csrfToken)
+          button.btn.btn-primary Log In

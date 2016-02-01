@@ -1,6 +1,8 @@
 /* @flow */
 
+const fs = require('fs');
 const express = require('express');
+const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
@@ -43,6 +45,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
+
+var accessLogStream = fs.createWriteStream(__dirname + '/access.log', {flags: 'a'});
+app.use(morgan('combined', {stream: accessLogStream}));
 
 var csrfProtection = csrf({ cookie: true });
 setupAuth(app, csrfProtection);

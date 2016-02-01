@@ -1,5 +1,3 @@
-move to DigitalOcean
-HTTPS
 feed shows publishing happening
 tests sign in and test visibility
 hide, follow, block tests

@@ -31,9 +31,9 @@ function responsiveImg(img, isBig) {
     published: img.published,
     hidden: img.hidden,
     src: {
-      mini: geturl(img.src, { format: "jpg", width: baseSize * 2/3, height: baseSize * 2/3, crop: "fill" }),
-      main: geturl(img.src, { format: "jpg", width: baseSize, height: baseSize, crop: "fill" }),
-      retina: geturl(img.src, { format: "jpg", width: baseSize * 2, height: baseSize * 2, crop: "fill" })
+      mini: geturl(img.src, { format: "jpg", width: baseSize * 2/3, height: baseSize * 2/3, crop: "fill" }).replace('http:', ''),
+      main: geturl(img.src, { format: "jpg", width: baseSize, height: baseSize, crop: "fill" }).replace('http:', ''),
+      retina: geturl(img.src, { format: "jpg", width: baseSize * 2, height: baseSize * 2, crop: "fill" }).replace('http:', '')
     }
   };
   return out;

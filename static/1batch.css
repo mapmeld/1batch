@@ -1,5 +1,9 @@
 html, body {
-  font-family: 'Noto Sans', sans-serif;
+  font-family: 'Biryani', sans-serif;
+}
+
+.btn {
+  padding-bottom: 4px;
 }
 
 .navbar {

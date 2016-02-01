@@ -470,6 +470,7 @@ app.post('/publish', middleware, csrfProtection, function (req, res) {
         if (err) {
           return printError(err, res);
         }
+        req.user.posted = new Date();
         Image.update({ user_id: req.user.name, picked: true, hidden: false }, { published: true }, { multi: true }, function(err) {
           if (err) {
             return printError(err, res);
@@ -490,6 +491,7 @@ app.post('/publish', middleware, csrfProtection, function (req, res) {
       if (err) {
         return printError(err, res);
       }
+      req.user.posted = null;
       Image.update({ user_id: req.user.name }, { published: false }, { multi: true }, function(err) {
         if (err) {
           return printError(err, res);

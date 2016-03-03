@@ -1,15 +1,17 @@
 /* @flow */
 
-const fs = require('fs');
-const express = require('express');
-const morgan = require('morgan');
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const MongoStore = require('connect-mongo')(session);
-const compression = require('compression');
+const koa = require('koa');
+const bodyParser = require('koa-bodyparser');
+const convert = require('koa-convert');
+const session = require('koa-generic-session');
+const MongoStore = require('koa-generic-session-mongo');
+const Jade = require('koa-jade');
+const logger = require('koa-logger');
+const route = require('koa-route');
+const compression = require('koa-compress');
 const mongoose = require('mongoose');
-const csrf = require('csurf');
+const csrf = require('koa-csrf');
+const kstatic = require('koa-static');
 
 const User = require('./models/user.js');
 const Image = require('./models/image.js');
@@ -29,68 +31,76 @@ var cleanDate = require('./common.js').cleanDate;
 console.log('Connecting to MongoDB (required)');
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
 
-var app = express();
-app.set('views', __dirname + '/views');
-app.set('view engine', 'jade');
-app.use(express['static'](__dirname + '/static'));
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true }));
+var app = koa();
+const jade = new Jade({
+  viewPath: './views'
+});
+app.use(jade.middleware);
+
+app.use(kstatic(__dirname + '/static'));
+app.use(bodyParser());
 app.use(compression());
-app.use(cookieParser());
+//app.use(cookieParser());
+
+app.keys = ['wkpow3jocijoid3jioj3', 'cekopjpdjjo3jcjio3jc'];
 app.use(session({
-  store: new MongoStore({
-    mongooseConnection: mongoose.connection
-  }),
-  secret: process.env.SESSION || 'fj23f90jfoijfl2mfp293i019eoijdoiqwj129',
-  resave: false,
-  saveUninitialized: false
+  store: new MongoStore()
 }));
 
-var accessLogStream = fs.createWriteStream(__dirname + '/access.log', {flags: 'a'});
-app.use(morgan('combined', {stream: accessLogStream}));
+app.use(logger());
 
-var csrfProtection = csrf({ cookie: true });
+var csrfProtection = csrf()(app);
 setupAuth(app, csrfProtection);
 
 setupUploads(app, csrfProtection);
 
 // homepage
-app.get('/', function (req, res) {
-  res.render('index');
-});
+app.use(route.get('/', home));
+app.use(route.get('/profile', myProfile));
+app.use(route.get('/:username/photo/:photoid', photo));
+app.use(route.get('/changename', changeName));
+app.use(route.post('/changename', postChangeName));
+app.use(route.get('/feed', feed));
+app.use(route.get('/profile/:username', yourProfile));
+app.use(route.post('/comment', comment));
+app.use(route.post('/publish', publish));
+app.use(route.post('/delete', makedelete));
+app.use(route.post('/block', block));
+app.use(route.post('/hide', postHide));
+app.use(route.get('/hide', getHide));
+app.use(route.post('/follow/:end_user', follow));
+app.use(route.post('/pick', pick));
+
+function *home () {
+  this.render('index');
+}
 
 // your own profile
-app.get('/profile', function (req, res, next) {
-  if (req.query.justLoggedIn) {
-    return confirmLogin(req, res, next);
-  } else {
-    return middleware(req, res, next);
-  }
-}, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *myProfile () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  if (!req.user.name || req.user.name.indexOf('@') > -1) {
-    return res.redirect('/changename');
+  if (!this.user.name || this.user.name.indexOf('@') > -1) {
+    return this.redirect('/changename');
   }
-  if (!req.user.republish && req.user.posted && (new Date() - req.user.posted) > 6 * 30 * 24 * 60 * 60 * 1000) {
+  if (!this.user.republish && this.user.posted && (new Date() - this.user.posted) > 6 * 30 * 24 * 60 * 60 * 1000) {
     // >180 days ago!
-    return User.findById(req.user._id, function (err, user) {
+    return User.findById(this.user._id, function (err, user) {
       if (err) {
         return printError(err, res);
       }
       user.republish = true;
-      req.user.republish = true;
+      this.user.republish = true;
       user.save(function (err) {
         if (err) {
           return printError(err, res);
         }
-        res.redirect('/profile');
+        this.redirect('/profile');
       });
     });
   }
-  Image.find({ user_id: req.user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
+  Image.find({ user_id: this.user.name }).select('_id src picked published hidden').exec(function (err, allimages) {
     if (err) {
       return printError(err, res);
     }
@@ -104,7 +114,7 @@ app.get('/profile', function (req, res, next) {
         saved.push(responsiveImg(img));
       }
     });
-    if (req.user.posted && !req.user.republish) {
+    if (this.user.posted && !this.user.republish) {
       // once user posts, end photo-picking
       saved = [];
     }
@@ -118,40 +128,40 @@ app.get('/profile', function (req, res, next) {
       return 0;
     });
 
-    res.render('profile', {
-      user: req.user,
+    this.render('profile', {
+      user: this.user,
       images: images,
       saved: saved,
-      posted: cleanDate(req.user.posted),
-      forUser: req.user,
-      csrfToken: req.csrfToken()
+      posted: cleanDate(this.user.posted),
+      forUser: this.user,
+      csrfToken: this.csrf
     });
   });
-});
+}
 
-app.get('/changename', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
-    return res.redirect('/login');
+function *changeName () {
+  if (!this.user) {
+    return this.redirect('/login');
   }
-  if (req.user.name && req.user.name.indexOf('@') === -1) {
-    return res.redirect('/profile');
+  if (this.user.name && this.user.name.indexOf('@') === -1) {
+    return this.redirect('/profile');
   }
-  res.render('changename', {
-    forUser: req.user,
-    csrfToken: req.csrfToken()
+  this.render('changename', {
+    forUser: this.user,
+    csrfToken: this.csrf
   });
-});
+}
 
-app.post('/changename', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
-    return res.redirect('/login');
+function *postChangeName () {
+  if (!this.user) {
+    return this.redirect('/login');
   }
-  if (req.user.name && req.user.name.indexOf('@') > -1) {
-    return res.redirect('/profile');
+  if (this.user.name && this.user.name.indexOf('@') > -1) {
+    return this.redirect('/profile');
   }
-  var newname = req.body.newname.toLowerCase();
+  var newname = this.body.newname.toLowerCase();
   if (!newname || newname.indexOf('@') > -1) {
-    return res.redirect('/changename');
+    return this.redirect('/changename');
   }
   User.find({ name: newname }, function (err, users) {
     if (err) {
@@ -160,26 +170,26 @@ app.post('/changename', middleware, csrfProtection, function (req, res) {
     if (users.length) {
       return printError(res, 'someone already has that username');
     }
-    User.findById(req.user._id, function (err, user) {
+    User.findById(this.user._id, function (err, user) {
       if (err) {
         return printError(res, err);
       }
-      req.user.name = newname;
+      this.user.name = newname;
       user.name = newname;
       user.save(function (err) {
         if (err) {
           return printError(res, err);
         }
-        res.redirect('/profile');
+        this.redirect('/profile');
       });
     });
   });
-});
+}
 
 // friends' photos
-app.get('/feed', middleware, csrfProtection, function (req, res) {
-  if (req.user) {
-    Follow.find({ start_user_id: req.user.name, blocked: false }, function (err, follows) {
+function *feed () {
+  if (this.user) {
+    Follow.find({ start_user_id: this.user.name, blocked: false }, function (err, follows) {
       if (err) {
         return printError(err, res);
       }
@@ -188,28 +198,28 @@ app.get('/feed', middleware, csrfProtection, function (req, res) {
         if (err) {
           return printError(err, res);
         }
-        res.render('feed', {
+        this.render('feed', {
           follows: follows,
-          forUser: req.user,
+          forUser: this.user,
           publishers: publishers
         });
       });
     });
   } else {
-    res.redirect('/');
+    this.redirect('/');
   }
-});
+}
 
 // someone else's profile
-app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
-  if (req.user && req.params.username.toLowerCase() === req.user.name) {
+function *yourProfile () {
+  if (this.user && this.params.username.toLowerCase() === this.user.name) {
     // redirect to your own profile
-    return res.redirect('/profile');
+    return this.redirect('/profile');
   }
-  if (req.params.username.indexOf('@') > -1) {
+  if (this.params.username.indexOf('@') > -1) {
     return printNoExist(res);
   }
-  User.findOne({ name: req.params.username.toLowerCase() }, '_id name posted', function (err, user) {
+  User.findOne({ name: this.params.username.toLowerCase() }, '_id name posted', function (err, user) {
     if (err) {
       return printError(err, res);
     }
@@ -223,24 +233,24 @@ app.get('/profile/:username', middleware, csrfProtection, function (req, res) {
           return printError(err, res);
         }
         images = images.map(responsiveImg);
-        res.render('profile', {
+        this.render('profile', {
           user: user,
           images: images,
           saved: [],
           posted: cleanDate(user.posted),
-          forUser: (req.user || null),
+          forUser: (this.user || null),
           following: following,
-          csrfToken: req.csrfToken()
+          csrfToken: this.csrf
         });
       });
     }
-    following(req.user, user, res, showProfile);
+    following(this.user, user, res, showProfile);
   });
-});
+}
 
 // view a published image
-app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, res) {
-  User.findOne({ name: req.params.username.toLowerCase() }, function (err, user) {
+function *photo () {
+  User.findOne({ name: this.params.username.toLowerCase() }, function (err, user) {
     if (err) {
       return printError(err, res);
     }
@@ -249,124 +259,124 @@ app.get('/:username/photo/:photoid', middleware, csrfProtection, function (req, 
     }
 
     function showImage(userFollowsSource, sourceFollowsUser) {
-      Image.findOne({ _id: req.params.photoid }, '_id src comments caption hidden published', function (err, image) {
+      Image.findOne({ _id: this.params.photoid }, '_id src comments caption hidden published', function (err, image) {
         if (err) {
           return printError(err, res);
         }
         if (!image) {
           return printNoExist(res);
         }
-        if (!req.user || req.user.name !== user.name) {
+        if (!this.user || this.user.name !== user.name) {
           if (image.hidden || !image.published) {
             return printNoExist(res);
           }
         }
         comments = image.comments || [];
         image = responsiveImg(image, true);
-        res.render('image', {
+        this.render('image', {
           user: user,
           image: image,
           comments: comments,
           posted: cleanDate(user.posted),
-          forUser: (req.user || null),
-          csrfToken: req.csrfToken(),
+          forUser: (this.user || null),
+          csrfToken: this.csrf,
           following: userFollowsSource,
-          canComment: req.user && ((req.user.name === user.name) || userFollowsSource || sourceFollowsUser)
+          canComment: this.user && ((this.user.name === user.name) || userFollowsSource || sourceFollowsUser)
         });
       });
     }
 
-    following(req.user, user, res, function (userFollowsSource) {
-      following(user, req.user, res, function (sourceFollowsUser) {
+    following(this.user, user, res, function (userFollowsSource) {
+      following(user, this.user, res, function (sourceFollowsUser) {
         showImage(userFollowsSource, sourceFollowsUser);
       });
     });
   });
-});
+}
 
 // follow another user
-app.post('/follow/:end_user', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *follow () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  if (req.user.name === req.params.end_user) {
+  if (this.user.name === this.params.end_user) {
     return printError('you can\'t follow yourself', res);
   }
-  if (req.params.end_user.indexOf('@') > -1) {
+  if (this.params.end_user.indexOf('@') > -1) {
     return printNoExist(res);
   }
-  Follow.findOne({ start_user_id: req.user.name, end_user_id: req.params.end_user }, function (err, existing) {
+  Follow.findOne({ start_user_id: this.user.name, end_user_id: this.params.end_user }, function (err, existing) {
     if (err) {
       return printError(err, res);
     }
-    if (req.body.makeFollow === 'true') {
+    if (this.body.makeFollow === 'true') {
       if (existing) {
         // follow already exists
         return printError('you already follow', res);
       }
 
       var f = new Follow();
-      f.start_user_id = req.user.name;
-      f.end_user_id = req.params.end_user;
+      f.start_user_id = this.user.name;
+      f.end_user_id = this.params.end_user;
       f.blocked = false;
       f.test = false;
       f.save(function (err) {
         if (err) {
           return printError(err, res);
         }
-        res.json({ status: 'success' });
+        this.json({ status: 'success' });
       });
     } else {
       if (!existing) {
         return printError('you already don\'t follow', res);
       }
-      Follow.remove({ start_user_id: req.user.name, end_user_id: req.params.end_user, blocked: false }, function (err) {
+      Follow.remove({ start_user_id: this.user.name, end_user_id: this.params.end_user, blocked: false }, function (err) {
         if (err) {
           return printError(err, res);
         }
-        res.json({ status: 'success' });
+        this.json({ status: 'success' });
       });
     }
   });
-});
+}
 
 // block another user
-app.post('/block', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *block () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  if (req.user.name === req.body.banuser) {
+  if (this.user.name === this.body.banuser) {
     return printError('you can\'t block yourself', res);
   }
   // remove a follow in either direction
-  Follow.remove({ start_user_id: req.user.name, end_user_id: req.body.banuser, blocked: false }, function (err) {
+  Follow.remove({ start_user_id: this.user.name, end_user_id: this.body.banuser, blocked: false }, function (err) {
     if (err) {
       return printError(err, res);
     }
-    Follow.remove({ start_user_id: req.body.banuser, end_user_id: req.user.name, blocked: false }, function (err) {
+    Follow.remove({ start_user_id: this.body.banuser, end_user_id: this.user.name, blocked: false }, function (err) {
       if (err) {
         return printError(err, res);
       }
 
       // create a new block
       var f = new Follow();
-      f.start_user_id = req.body.banuser;
-      f.end_user_id = req.user.name;
+      f.start_user_id = this.body.banuser;
+      f.end_user_id = this.user.name;
       f.blocked = true;
       f.test = false;
       f.save(function (err) {
         if (err) {
           return printError(err, res);
         }
-        Image.findById(req.body.id, function (err, img) {
+        Image.findById(this.body.id, function (err, img) {
           if (err) {
             return printError(err, res);
           }
           if (img) {
             for (var c = img.comments.length - 1; c >= 0; c--) {
-              if (img.comments[c].user === req.body.banuser) {
+              if (img.comments[c].user === this.body.banuser) {
                 img.comments.splice(c, 1);
               }
             }
@@ -374,29 +384,29 @@ app.post('/block', middleware, csrfProtection, function (req, res) {
               if (err) {
                 return printError(err, res);
               }
-              res.render('block', { exist: true });
+              this.render('block', { exist: true });
             });
           } else {
-            res.render('block', { exist: false });
+            this.render('block', { exist: false });
           }
         });
       });
     });
   });
-});
+}
 
 // pick an image
-app.post('/pick', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *pick () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  if (req.user.posted) {
+  if (this.user.posted) {
     // would immediately publish, and we don't allow that
     return printError('you already posted', res);
   }
-  Image.update({ _id: req.body.id, user_id: req.user.name },
-    { picked: (req.body.makePick === 'true') },
+  Image.update({ _id: this.body.id, user_id: this.user.name },
+    { picked: (this.body.makePick === 'true') },
     function (err, imgcount) {
     if (err) {
       return printError(err, res);
@@ -404,59 +414,59 @@ app.post('/pick', middleware, csrfProtection, function (req, res) {
     if (!imgcount) {
       return printError('that isn\'t your image', res);
     }
-    res.json({ status: 'success' });
+    this.json({ status: 'success' });
   });
-});
+}
 
-app.get('/hide', middleware, csrfProtection, function (req, res) {
-  res.render('hide');
-});
+function *getHide () {
+  this.render('hide');
+}
 
-app.post('/hide', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *postHide () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  Image.update({ _id: req.body.id, user_id: req.user.name }, { hidden: (req.body.makeHide === 'true') }, function (err, imgcount) {
+  Image.update({ _id: this.body.id, user_id: this.user.name }, { hidden: (this.body.makeHide === 'true') }, function (err, imgcount) {
     if (err) {
       return printError(err, res);
     }
     if (!imgcount) {
       return printError('that isn\'t your image', res);
     }
-    if (req.body.makeHide === 'true') {
-      res.redirect('/hide');
+    if (this.body.makeHide === 'true') {
+      this.redirect('/hide');
     } else {
-      res.redirect('/' + req.user.name + '/photo/' + req.body.id);
+      this.redirect('/' + this.user.name + '/photo/' + this.body.id);
     }
   });
-});
+}
 
-app.post('/delete', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *makedelete () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  Image.remove({ _id: req.body.id, user_id: req.user.name }, function (err) {
+  Image.remove({ _id: this.body.id, user_id: this.user.name }, function (err) {
     if (err) {
       return printError(err, res);
     }
-    res.redirect('/hide');
+    this.redirect('/hide');
   });
-});
+}
 
 // publish picked images
-app.post('/publish', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *publish () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  if (req.body.makePublish === 'true') {
+  if (this.body.makePublish === 'true') {
     // publish
-    if (req.user.posted) {
+    if (this.user.posted) {
       return printError('you already posted', res);
     }
-    Image.count({ user_id: req.user.name, picked: true, hidden: false }, function (err, count) {
+    Image.count({ user_id: this.user.name, picked: true, hidden: false }, function (err, count) {
       if (err) {
         return printError(err, res);
       }
@@ -466,49 +476,49 @@ app.post('/publish', middleware, csrfProtection, function (req, res) {
       if (count > 8) {
         return printError('you have too many picked images', res);
       }
-      User.update({ name: req.user.name }, { posted: (new Date()) }, function(err) {
+      User.update({ name: this.user.name }, { posted: (new Date()) }, function(err) {
         if (err) {
           return printError(err, res);
         }
-        req.user.posted = new Date();
-        Image.update({ user_id: req.user.name, picked: true, hidden: false }, { published: true }, { multi: true }, function(err) {
+        this.user.posted = new Date();
+        Image.update({ user_id: this.user.name, picked: true, hidden: false }, { published: true }, { multi: true }, function(err) {
           if (err) {
             return printError(err, res);
           }
-          res.json({ status: 'success' });
+          this.json({ status: 'success' });
         });
       });
     });
   } else {
     // un-publish within 60 minutes
-    if (!req.user.posted) {
+    if (!this.user.posted) {
       return printError('you have not posted', res);
     }
-    if ((new Date()) - req.user.posted > 60 * 60 * 1000) {
+    if ((new Date()) - this.user.posted > 60 * 60 * 1000) {
       return printError('too much time has passed. you can remove images but not re-publish', res);
     }
-    User.update({ name: req.user.name }, { posted: null }, function(err) {
+    User.update({ name: this.user.name }, { posted: null }, function(err) {
       if (err) {
         return printError(err, res);
       }
-      req.user.posted = null;
-      Image.update({ user_id: req.user.name }, { published: false }, { multi: true }, function(err) {
+      this.user.posted = null;
+      Image.update({ user_id: this.user.name }, { published: false }, { multi: true }, function(err) {
         if (err) {
           return printError(err, res);
         }
-        res.json({ status: 'success' });
+        this.json({ status: 'success' });
       });
     });
   }
-});
+}
 
 // comment on photo
-app.post('/comment', middleware, csrfProtection, function (req, res) {
-  if (!req.user) {
+function *comment () {
+  if (!this.user) {
     // log in first
-    return res.redirect('/login');
+    return this.redirect('/login');
   }
-  Image.findById(req.body.id, function (err, img) {
+  Image.findById(this.body.id, function (err, img) {
     if (err) {
       return printError(err, res);
     }
@@ -522,18 +532,18 @@ app.post('/comment', middleware, csrfProtection, function (req, res) {
       if (!user) {
         return printNoExist(err, res);
       }
-      following(req.user, user, res, function (userFollowsSource) {
-        following(user, req.user, res, function (sourceFollowsUser) {
-          if ((req.user.name === user.name) || userFollowsSource || sourceFollowsUser) {
+      following(this.user, user, res, function (userFollowsSource) {
+        following(user, this.user, res, function (sourceFollowsUser) {
+          if ((this.user.name === user.name) || userFollowsSource || sourceFollowsUser) {
             if (!img.comments) {
               img.comments = [];
             }
-            img.comments.push({ user: req.user.name, text: req.body.text.trim() });
+            img.comments.push({ user: this.user.name, text: this.body.text.trim() });
             img.save(function (err){
               if (err) {
                 return printError(err, res);
               }
-              res.redirect('/' + user.name + '/photo/' + req.body.id);
+              this.redirect('/' + user.name + '/photo/' + this.body.id);
             });
           } else {
             return printError('you can\'t comment', res);
@@ -542,8 +552,8 @@ app.post('/comment', middleware, csrfProtection, function (req, res) {
       });
     });
   });
-});
+}
 
-app.listen(process.env.PORT || 8080, function() { });
+app.listen(process.env.PORT || 8080);
 
 module.exports = app;

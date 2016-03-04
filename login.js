@@ -4,6 +4,7 @@ const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const crypto = require('crypto');
+const thunkify = require('thunkify');
 
 const User = require('./models/user.js');
 const printError = require('./common.js').error;
@@ -144,31 +145,27 @@ var setupAuth = function (app, csrfProtection) {
   }
 
   function *postRegister () {
-    User.find({ name: this.body.username.toLowerCase() }, function (err, users) {
-      if (err) {
-        return printError(res, err);
-      }
-      if (users.length) {
-        return printError(res, 'user with that name already exists');
-      }
-      pwdhash(this.body.password, function (err, salt, hash) {
-        if (err) {
-          return printError(res, err);
-        }
-        var u = new User();
-        u.name = this.body.username.toLowerCase();
-        u.localpass = hash;
-        u.salt = salt;
-        u.test = false;
-        u.republish = false;
-        u.save(function (err) {
-          if (err) {
-            return printError(err, res);
-          }
-          this.redirect('/login?user=' + u.name);
-        });
-      });
+    var username = this.request.body.username.trim().toLowerCase();
+    var pwd = this.request.body.password;
+    var users = yield User.find({ name: username }).exec();
+    if (users.length) {
+      return printError(this, 'user with that name already exists');
+    }
+
+    var len = 128;
+    var iterations = 12000;
+    var salt = yield thunkify(crypto.randomBytes)(len);
+    salt = salt.toString('base64');
+    var hash = yield thunkify(crypto.pbkdf2)(pwd, salt, iterations, len);
+    var u = new User({
+      name: username,
+      localpass: hash,
+      salt: salt,
+      test: false,
+      republish: false
     });
+    u = yield u.save();
+    this.redirect('/login?user=' + username);
   }
 
   function *logout () {

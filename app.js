@@ -30,6 +30,9 @@ var cleanDate = require('./common.js').cleanDate;
 
 console.log('Connecting to MongoDB (required)');
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGODB_URI || 'localhost');
+mongoose.connection.on("error", function(err) {
+  console.log(err);
+});
 
 var app = koa();
 const jade = new Jade({
@@ -48,11 +51,11 @@ app.use(session({
 }));
 
 app.use(logger());
+csrf(app);
+app.use(csrf.middleware);
 
-var csrfProtection = csrf()(app);
-setupAuth(app, csrfProtection);
-
-setupUploads(app, csrfProtection);
+setupAuth(app);
+setupUploads(app);
 
 // homepage
 app.use(route.get('/', home));

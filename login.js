@@ -26,36 +26,16 @@ var confirmLogin = function (next) {
   passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(next);
 };
 
-var pwdhash = function (pwd, salt, fn) {
-  var len = 128;
-  var iterations = 12000;
-  if (3 == arguments.length) {
-    crypto.pbkdf2(pwd, salt, iterations, len, function(err, hash){
-      fn(err, hash.toString('base64'));
-    });
-  } else {
-    fn = salt;
-    crypto.randomBytes(len, function(err, salt){
-      if (err) return fn(err);
-      salt = salt.toString('base64');
-      crypto.pbkdf2(pwd, salt, iterations, len, function(err, hash){
-        if (err) return fn(err);
-        fn(null, salt, hash.toString('base64'));
-      });
-    });
-  }
-};
-
-var setupAuth = function (app, csrfProtection) {
+var setupAuth = function (app, router) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  app.use(route.post('/login', postLogin));
-  app.use(route.get('/login', getLogin));
-  app.use(route.post('/register', postRegister));
-  app.use(route.get('/register', getRegister));
-  app.use(route.get('/bye', bye));
-  app.use(route.get('/logout', logout));
+  router.post('/login', postLogin)
+    .get('/login', getLogin)
+    .post('/register', postRegister)
+    .get('/register', getRegister)
+    .get('/bye', bye)
+    .get('/logout', logout);
 
   if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(new GoogleStrategy(
@@ -66,14 +46,15 @@ var setupAuth = function (app, csrfProtection) {
         passReqToCallback: true
       },
       function(request, accessToken, refreshToken, profile, done) {
-        User.findOne({ googid: profile.id }, function (err, user) {
+        User.findOne({ googid: profile.id }).exec(function (err, user) {
           if (!user) {
-            user = new User();
-            user.googid = profile.id;
-            user.name = profile.email;
-            user.test = false;
-            user.republish = false;
-            user.save(function() {
+            user = new User({
+              googid: profile.id,
+              name: profile.email,
+              test: false,
+              republish: false
+            });
+            user.save(function (err) {
               return done(err, user);
             });
           } else {
@@ -85,11 +66,12 @@ var setupAuth = function (app, csrfProtection) {
   }
 
   passport.use(new LocalStrategy(function(username, password, cb) {
-    User.findOne({ name: username.toLowerCase() }, function(err, user) {
-      if (err) { return cb(err); }
+    User.findOne({ name: username.toLowerCase() }).exec(function (err, user) {
       if (!user) { return cb(null, false); }
-      pwdhash(password, user.salt, function (err, hash) {
-        if (err) { return cb(err); }
+      var len = 128;
+      var iterations = 12000;
+      crypto.pbkdf2(password, user.salt, iterations, len, function (err, hash) {
+        hash = hash.toString('base64');
         if (hash !== user.localpass) { return cb(null, false); }
         return cb(null, user);
       });

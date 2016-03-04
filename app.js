@@ -56,10 +56,7 @@ app.use(logger());
 csrf(app);
 app.use(csrf.middleware);
 
-setupAuth(app);
-setupUploads(app);
-
-// homepage
+// routes
 router.get('/', home)
   .get('/profile', myProfile)
   .get('/:username/photo/:photoid', photo)
@@ -75,6 +72,9 @@ router.get('/', home)
   .get('/hide', getHide)
   .post('/follow/:end_user', follow)
   .post('/pick', pick);
+
+setupAuth(app, router);
+setupUploads(app, router);
 
 function *home () {
   this.render('index');

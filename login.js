@@ -1,4 +1,3 @@
-const route = require('koa-route');
 const passport = require('koa-passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
@@ -26,7 +25,10 @@ var setupAuth = function (app, router) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  router.post('/login', postLogin)
+  router.post('/login', passport.authenticate('local', {
+      successRedirect: '/profile?justLoggedIn=true',
+      failureRedirect: '/login'
+    }))
     .get('/login', getLogin)
     .post('/register', postRegister)
     .get('/register', getRegister)
@@ -66,80 +68,63 @@ var setupAuth = function (app, router) {
       if (!user) { return cb(null, false); }
       var len = 128;
       var iterations = 12000;
-      crypto.pbkdf2(password, user.salt, iterations, len, function (err, hash) {
-        hash = hash.toString('base64');
-        if (hash !== user.localpass) { return cb(null, false); }
-        return cb(null, user);
-      });
+      var hash = crypto.pbkdf2Sync(password, user.salt, iterations, len, 'sha256');
+      hash = hash.toString('base64');
+      if (hash !== user.localpass) { return cb(null, false); }
+      return cb(null, user);
     });
   }));
 
   passport.serializeUser(function(user, done) {
-    done(null, user);
+    done(null, user._id);
   });
 
-  passport.deserializeUser(function(obj, done) {
-    done(null, obj);
+  passport.deserializeUser(function(id, done) {
+    User.findById(id, done);
   });
 
-  function *postLogin (next) {
-    var ctx = this;
-    yield* passport.authenticate('local', function*(err, user, info) {
-      if (err) {
-        throw err;
-      }
-      if (!user) {
-        return ctx.redirect('/login');
-      } else if (user.posted) {
-        //yield ctx.login(user);
-        return ctx.redirect('/feed');
-      } else {
-        //yield ctx.login(user);
-        return ctx.redirect('/profile');
-      }
-    }).call(this, next);
-  }
-
-  function *getLogin () {
-    this.render('login', {
-      forUser: this.user,
-      csrfToken: this.csrf,
-      newuser: this.query.user,
+  function getLogin (ctx, next) {
+    ctx.render('login', {
+      forUser: ctx.user,
+      csrfToken: ctx.csrf,
+      newuser: ctx.query.user,
       googly: (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET)
     });
   }
 
-  function *getRegister () {
-    if (this.user) {
-      return this.redirect('/login');
+  function getRegister (ctx, next) {
+    if (ctx.user) {
+      return ctx.redirect('/login');
     }
-    this.render('register', {
-      csrfToken: this.csrf
+    ctx.render('register', {
+      csrfToken: ctx.csrf
     });
   }
 
-  function *bye () {
-    if (this.user) {
-      this.redirect('/logout');
+  function bye (ctx, next) {
+    if (ctx.user) {
+      ctx.redirect('/logout');
     } else {
-      this.render('bye');
+      ctx.render('bye');
     }
   }
 
-  function *postRegister () {
-    var username = this.request.body.username.trim().toLowerCase();
-    var pwd = this.request.body.password;
-    var users = yield User.find({ name: username }).exec();
+  async function postRegister (ctx, next) {
+    var username = ctx.request.body.username.trim().toLowerCase();
+    var pwd = ctx.request.body.password;
+    var users = await User.find({ name: username }).exec();
     if (users.length) {
-      return printError(this, 'user with that name already exists');
+      return printError(ctx, 'user with that name already exists');
     }
 
     var len = 128;
     var iterations = 12000;
-    var salt = yield thunkify(crypto.randomBytes)(len);
+    var salt, hash;
+    salt = await crypto.randomBytes(len);
     salt = salt.toString('base64');
-    var hash = yield thunkify(crypto.pbkdf2)(pwd, salt, iterations, len);
+    hash = crypto.pbkdf2Sync(pwd, salt, iterations, len, 'sha256');
     hash = hash.toString('base64');
+
     var u = new User({
       name: username,
       localpass: hash,
@@ -147,13 +132,13 @@ var setupAuth = function (app, router) {
       test: false,
       republish: false
     });
-    u = yield u.save();
-    this.redirect('/login?user=' + username);
+    u = await u.save();
+    ctx.redirect('/login?user=' + username);
   }
 
-  function *logout () {
-    this.logout();
-    this.redirect('/bye');
+  function logout (ctx, next) {
+    ctx.logout();
+    ctx.redirect('/bye');
   }
 
   //app.get('/auth/google', passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' }));

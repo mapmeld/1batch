@@ -16,7 +16,6 @@ const csrf = require('koa-csrf');
 const kstatic = require('koa-static');
 
 const thunkify = require('thunkify');
-require('nodent')();
 
 const User = require('./models/user.js');
 const Image = require('./models/image.js');
@@ -58,11 +57,9 @@ app.use(convert(csrf.middleware));
 
 // routes
 
-function* authCheck(next) {
-  console.log(ctx.passport);
-  console.log(ctx.passport.user);
+function authCheck(ctx, next) {
   if (ctx.isAuthenticated()) {
-    yield next;
+    return next();
   } else {
     ctx.redirect('/login');
   }
@@ -87,29 +84,32 @@ router.get('/', home)
 setupAuth(app, router);
 setupUploads(app, router);
 
-function home (ctx) {
+async function home (ctx) {
   ctx.render('index');
 }
 
 // your own profile
-async function myProfile (ctx) {
-  console.log('in the zone');
+async function myProfile (ctx, next) {
   var requser = (ctx.req.user || ctx.request.user);
   if (!requser.name || requser.name.indexOf('@') > -1) {
+    console.log('changename');
     return ctx.redirect('/changename');
   }
   if (!requser.republish && requser.posted && (new Date() - requser.posted) > 6 * 30 * 24 * 60 * 60 * 1000) {
     // >180 days ago!
-    var user = yield User.findById(requser._id).exec();
+    console.log('180 days');
+    var user = await User.findById(requser._id).exec();
     user.republish = true;
     requser.republish = true;
-    user = yield user.save();
+    user = await user.save();
     return ctx.redirect('/profile');
   }
-  var allimages = yield Image.find({ user_id: requser.name }).select('_id src picked published hidden').exec();
+  console.log('fetching images)');
+  var allimages = await Image.find({ user_id: requser.name }).select('_id src picked published hidden').exec();
   var images = [];
   var saved = [];
   allimages.map(function(img) {
+    console.log('img fix');
     if (img.published) {
       images.push(responsiveImg(img));
     } else {
@@ -118,6 +118,7 @@ async function myProfile (ctx) {
   });
   if (requser.posted && !requser.republish) {
     // once user posts, end photo-picking
+    console.log('saved');
     saved = [];
   }
   saved.sort(function(a, b) {
@@ -130,6 +131,7 @@ async function myProfile (ctx) {
     return 0;
   });
 
+  console.log('rendering');
   ctx.render('profile', {
     user: requser,
     images: images,
@@ -153,7 +155,7 @@ function changeName (ctx) {
   });
 }
 
-function postChangeName (ctx) {
+async function postChangeName (ctx) {
   if (!requser) {
     return ctx.redirect('/login');
   }
@@ -164,23 +166,23 @@ function postChangeName (ctx) {
   if (!newname || newname.indexOf('@') > -1) {
     return ctx.redirect('/changename');
   }
-  var users = yield User.find({ name: newname }).exec();
+  var users = await User.find({ name: newname }).exec();
   if (users.length) {
     return printError(res, 'someone already has that username');
   }
-  var user = yield User.findById(requser._id).exec();
+  var user = await User.findById(requser._id).exec();
   requser.name = newname;
   user.name = newname;
-  user = yield user.save();
+  user = await user.save();
   ctx.redirect('/profile');
 }
 
 // friends' photos
-function feed (ctx) {
+async function feed (ctx) {
   if (requser) {
-    var follows = yield Follow.find({ start_user_id: requser.name, blocked: false }).exec();
+    var follows = await Follow.find({ start_user_id: requser.name, blocked: false }).exec();
     var permDate = new Date((new Date()) - 60 * 60 * 1000);
-    var publishers = yield User.find({ published: { $ne: null, $lt: permDate } }).sort('-published').limit(6).exec();
+    var publishers = await User.find({ published: { $ne: null, $lt: permDate } }).sort('-published').limit(6).exec();
 
     ctx.render('feed', {
       follows: follows,
@@ -193,7 +195,7 @@ function feed (ctx) {
 }
 
 // someone else's profile
-function theirProfile (ctx) {
+async function theirProfile (ctx) {
   if (requser && ctx.params.username.toLowerCase() === requser.name) {
     // redirect to your own profile
     return ctx.redirect('/profile');
@@ -201,13 +203,13 @@ function theirProfile (ctx) {
   if (ctx.params.username.indexOf('@') > -1) {
     return printNoExist(res);
   }
-  var user = yield User.findOne({ name: ctx.params.username.toLowerCase() }, '_id name posted').exec();
+  var user = await User.findOne({ name: ctx.params.username.toLowerCase() }, '_id name posted').exec();
   if (!user) {
     return printNoExist(ctx);
   }
 
-  var follows = yield following(requser, user, ctx);
-  var images = yield Image.find({ published: true, hidden: false, user_id: user.name }).select('_id src').exec();
+  var follows = await following(requser, user, ctx);
+  var images = await Image.find({ published: true, hidden: false, user_id: user.name }).select('_id src').exec();
   images = images.map(responsiveImg);
   ctx.render('profile', {
     user: user,
@@ -221,15 +223,15 @@ function theirProfile (ctx) {
 }
 
 // view a published image
-function photo (ctx) {
-  var user = yield User.findOne({ name: ctx.params.username.toLowerCase() }).exec();
+async function photo (ctx) {
+  var user = await User.findOne({ name: ctx.params.username.toLowerCase() }).exec();
   if (!user || !user.posted) {
     return printNoExist(res);
   }
 
-  var userFollowsSource = yield following(requser, user, res);
-  var sourceFollowsUser = yield following(user, requser, res);
-  var image = yield Image.findOne({ _id: ctx.params.photoid }, '_id src comments caption hidden published').exec();
+  var userFollowsSource = await following(requser, user, res);
+  var sourceFollowsUser = await following(user, requser, res);
+  var image = await Image.findOne({ _id: ctx.params.photoid }, '_id src comments caption hidden published').exec();
   if (!image) {
     return printNoExist(res);
   }
@@ -253,7 +255,7 @@ function photo (ctx) {
 }
 
 // follow another user
-function follow (ctx) {
+async function follow (ctx) {
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
@@ -264,7 +266,7 @@ function follow (ctx) {
   if (ctx.params.end_user.indexOf('@') > -1) {
     return printNoExist(res);
   }
-  var existing = yield Follow.findOne({ start_user_id: requser.name, end_user_id: ctx.params.end_user }).exec();
+  var existing = await Follow.findOne({ start_user_id: requser.name, end_user_id: ctx.params.end_user }).exec();
   if (ctx.body.makeFollow === 'true') {
     if (existing) {
       // follow already exists
@@ -277,19 +279,19 @@ function follow (ctx) {
       blocked: false,
       test: false
     });
-    f = yield f.save();
+    f = await f.save();
     ctx.json({ status: 'success' });
   } else {
     if (!existing) {
       return printError('you already don\'t follow', res);
     }
-    yield Follow.remove({ start_user_id: requser.name, end_user_id: ctx.params.end_user, blocked: false }).exec();
+    await Follow.remove({ start_user_id: requser.name, end_user_id: ctx.params.end_user, blocked: false }).exec();
     ctx.json({ status: 'success' });
   }
 }
 
 // block another user
-function block (ctx) {
+async function block (ctx) {
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
@@ -298,8 +300,8 @@ function block (ctx) {
     return printError('you can\'t block yourself', res);
   }
   // remove a follow in either direction
-  yield Follow.remove({ start_user_id: requser.name, end_user_id: ctx.body.banuser, blocked: false }).exec();
-  yield Follow.remove({ start_user_id: ctx.body.banuser, end_user_id: requser.name, blocked: false }).exec();
+  await Follow.remove({ start_user_id: requser.name, end_user_id: ctx.body.banuser, blocked: false }).exec();
+  await Follow.remove({ start_user_id: ctx.body.banuser, end_user_id: requser.name, blocked: false }).exec();
 
   // create a new block
   var f = new Follow({
@@ -308,16 +310,16 @@ function block (ctx) {
     blocked: true,
     test: false
   });
-  f = yield f.save();
+  f = await f.save();
 
-  var img = yield Image.findById(ctx.body.id).exec();
+  var img = await Image.findById(ctx.body.id).exec();
   if (img) {
     for (var c = img.comments.length - 1; c >= 0; c--) {
       if (img.comments[c].user === ctx.body.banuser) {
         img.comments.splice(c, 1);
       }
     }
-    img = yield img.save();
+    img = await img.save();
     ctx.render('block', { exist: true });
   } else {
     ctx.render('block', { exist: false });
@@ -325,7 +327,7 @@ function block (ctx) {
 }
 
 // pick an image
-function pick (ctx) {
+async function pick (ctx) {
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
@@ -334,7 +336,7 @@ function pick (ctx) {
     // would immediately publish, and we don't allow that
     return printError('you already posted', res);
   }
-  var imgcount = yield Image.update({ _id: ctx.body.id, user_id: requser.name },
+  var imgcount = await Image.update({ _id: ctx.body.id, user_id: requser.name },
     { picked: (ctx.body.makePick === 'true') }).exec();
   if (!imgcount) {
     return printError('that isn\'t your image', res);
@@ -346,12 +348,12 @@ function getHide (ctx) {
   ctx.render('hide');
 }
 
-function postHide (ctx) {
+async function postHide (ctx) {
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
-  var imgcount = yield Image.update({ _id: ctx.body.id, user_id: requser.name }, { hidden: (ctx.body.makeHide === 'true') }).exec();
+  var imgcount = await Image.update({ _id: ctx.body.id, user_id: requser.name }, { hidden: (ctx.body.makeHide === 'true') }).exec();
   if (!imgcount) {
     return printError('that isn\'t your image', res);
   }
@@ -362,17 +364,17 @@ function postHide (ctx) {
   }
 }
 
-function makedelete (ctx) {
+async function makedelete (ctx) {
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
-  yield Image.remove({ _id: ctx.body.id, user_id: requser.name }).exec();
+  await Image.remove({ _id: ctx.body.id, user_id: requser.name }).exec();
   ctx.redirect('/hide');
 }
 
 // publish picked images
-function publish (ctx) {
+async function publish (ctx) {
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
@@ -382,16 +384,16 @@ function publish (ctx) {
     if (requser.posted) {
       return printError('you already posted', res);
     }
-    var count = yield Image.count({ user_id: requser.name, picked: true, hidden: false }).exec();
+    var count = await Image.count({ user_id: requser.name, picked: true, hidden: false }).exec();
     if (!count) {
       return printError('you have no picked images', res);
     }
     if (count > 8) {
       return printError('you have too many picked images', res);
     }
-    yield User.update({ name: requser.name }, { posted: (new Date()) }).exec();
+    await User.update({ name: requser.name }, { posted: (new Date()) }).exec();
     requser.posted = new Date();
-    yield Image.update({ user_id: requser.name, picked: true, hidden: false }, { published: true }, { multi: true });
+    await Image.update({ user_id: requser.name, picked: true, hidden: false }, { published: true }, { multi: true });
     ctx.json({ status: 'success' });
   } else {
     // un-publish within 60 minutes
@@ -401,36 +403,36 @@ function publish (ctx) {
     if ((new Date()) - requser.posted > 60 * 60 * 1000) {
       return printError('too much time has passed. you can remove images but not re-publish', res);
     }
-    yield User.update({ name: requser.name }, { posted: null }).exec();
+    await User.update({ name: requser.name }, { posted: null }).exec();
     requser.posted = null;
-    yield Image.update({ user_id: requser.name }, { published: false }, { multi: true });
+    await Image.update({ user_id: requser.name }, { published: false }, { multi: true });
     ctx.json({ status: 'success' });
   }
 }
 
 // comment on photo
-function comment (ctx) {
+async function comment (ctx) {
   var requser = ctx.request.user;
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
-  var img = yield Image.findById(ctx.body.id).exec();
+  var img = await Image.findById(ctx.body.id).exec();
   if (!img || img.hidden || !img.published) {
     return printNoExist(err, res);
   }
-  var user = yield User.findOne({ name: img.user_id }).exec();
+  var user = await User.findOne({ name: img.user_id }).exec();
   if (!user) {
     return printNoExist(err, res);
   }
-  var userFollowsSource = yield following(requser, user, res);
-  var sourceFollowsUser = yield following(user, requser, res);
+  var userFollowsSource = await following(requser, user, res);
+  var sourceFollowsUser = await following(user, requser, res);
   if ((requser.name === user.name) || userFollowsSource || sourceFollowsUser) {
     if (!img.comments) {
       img.comments = [];
     }
     img.comments.push({ user: requser.name, text: ctx.body.text.trim() });
-    img = yield img.save();
+    img = await img.save();
     ctx.redirect('/' + user.name + '/photo/' + ctx.body.id);
   } else {
     return printError('you can\'t comment', res);

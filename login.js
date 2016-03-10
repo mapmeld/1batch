@@ -9,15 +9,11 @@ const thunkify = require('thunkify');
 const User = require('./models/user.js');
 const printError = require('./common.js').error;
 
-var middleware = function(next) {
+var middleware = function(ctx, next) {
   if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET) {
-    //passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(, next);
-    next();
+    return passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' });
   } else {
-    passport.authenticate('local', function(err, user, info) {
-      this.authenticated = !! user;
-      next();
-    })(next);
+    return passport.authenticate('local', {});
   }
 };
 
@@ -86,18 +82,22 @@ var setupAuth = function (app, router) {
     done(null, obj);
   });
 
-  function *postLogin (ctx, next) {
-    yield* passport.authenticate('local', function(user, info, status) {
-      if (!user) {
-        ctx.redirect('/login');
-      } else if (user.posted) {
-        ctx.login(user);
-        //ctx.redirect('/feed');
-      } else {
-        return ctx.login(user);
-        //ctx.redirect('/profile');
+  function *postLogin (next) {
+    var ctx = this;
+    yield* passport.authenticate('local', function*(err, user, info) {
+      if (err) {
+        throw err;
       }
-    }).call(ctx, next);
+      if (!user) {
+        return ctx.redirect('/login');
+      } else if (user.posted) {
+        //yield ctx.login(user);
+        return ctx.redirect('/feed');
+      } else {
+        //yield ctx.login(user);
+        return ctx.redirect('/profile');
+      }
+    }).call(this, next);
   }
 
   function *getLogin () {
@@ -139,6 +139,7 @@ var setupAuth = function (app, router) {
     var salt = yield thunkify(crypto.randomBytes)(len);
     salt = salt.toString('base64');
     var hash = yield thunkify(crypto.pbkdf2)(pwd, salt, iterations, len);
+    hash = hash.toString('base64');
     var u = new User({
       name: username,
       localpass: hash,

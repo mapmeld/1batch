@@ -15,8 +15,6 @@ const mongoose = require('mongoose');
 const csrf = require('koa-csrf');
 const kstatic = require('koa-static');
 
-const thunkify = require('thunkify');
-
 const User = require('./models/user.js');
 const Image = require('./models/image.js');
 const Follow = require('./models/following.js');
@@ -29,7 +27,7 @@ var setupUploads = require('./uploads.js');
 var printError = require('./common.js').error;
 var printNoExist = require('./common.js').noExist;
 var responsiveImg = require('./common.js').responsiveImg;
-var following = thunkify(require('./common.js').following);
+var following = require('./common.js').following;
 var cleanDate = require('./common.js').cleanDate;
 
 console.log('Connecting to MongoDB (required)');
@@ -68,18 +66,18 @@ function authCheck(ctx, next) {
 router.get('/', home)
   .get('/profile', authCheck, myProfile)
   .get('/:username/photo/:photoid', photo)
-  .get('/changename', changeName)
-  .post('/changename', postChangeName)
-  .get('/feed', feed)
+  .get('/changename', authCheck, changeName)
+  .post('/changename', authCheck, postChangeName)
+  .get('/feed', authCheck, feed)
   .get('/profile/:username', theirProfile)
-  .post('/comment', comment)
-  .post('/publish', publish)
-  .post('/delete', makedelete)
-  .post('/block', block)
-  .post('/hide', postHide)
-  .get('/hide', getHide)
-  .post('/follow/:end_user', follow)
-  .post('/pick', pick);
+  .post('/comment', authCheck, comment)
+  .post('/publish', authCheck, publish)
+  .post('/delete', authCheck, makedelete)
+  .post('/block', authCheck, block)
+  .post('/hide', authCheck, postHide)
+  .get('/hide', authCheck, getHide)
+  .post('/follow/:end_user', authCheck, follow)
+  .post('/pick', authCheck, pick);
 
 setupAuth(app, router);
 setupUploads(app, router);
@@ -144,9 +142,6 @@ async function myProfile (ctx, next) {
 
 function changeName (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    return ctx.redirect('/login');
-  }
   if (requser.name && requser.name.indexOf('@') === -1) {
     return ctx.redirect('/profile');
   }
@@ -158,13 +153,10 @@ function changeName (ctx) {
 
 async function postChangeName (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    return ctx.redirect('/login');
-  }
   if (requser.name && requser.name.indexOf('@') > -1) {
     return ctx.redirect('/profile');
   }
-  var newname = ctx.body.newname.toLowerCase();
+  var newname = ctx.request.body.newname.toLowerCase();
   if (!newname || newname.indexOf('@') > -1) {
     return ctx.redirect('/changename');
   }
@@ -262,10 +254,6 @@ async function photo (ctx) {
 // follow another user
 async function follow (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
   if (requser.name === ctx.params.end_user) {
     return printError('you can\'t follow yourself', ctx);
   }
@@ -273,7 +261,7 @@ async function follow (ctx) {
     return printNoExist(ctx);
   }
   var existing = await Follow.findOne({ start_user_id: requser.name, end_user_id: ctx.params.end_user }).exec();
-  if (ctx.body.makeFollow === 'true') {
+  if (ctx.request.body.makeFollow === 'true') {
     if (existing) {
       // follow already exists
       return printError('you already follow', ctx);
@@ -299,33 +287,29 @@ async function follow (ctx) {
 // block another user
 async function block (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
-  if (requser.name === ctx.body.banuser) {
+  if (requser.name === ctx.request.body.banuser) {
     return printError('you can\'t block yourself', ctx);
   }
   // remove a follow in either direction
-  await Follow.remove({ start_user_id: requser.name, end_user_id: ctx.body.banuser, blocked: false }).exec();
-  await Follow.remove({ start_user_id: ctx.body.banuser, end_user_id: requser.name, blocked: false }).exec();
+  await Follow.remove({ start_user_id: requser.name, end_user_id: ctx.request.body.banuser, blocked: false }).exec();
+  await Follow.remove({ start_user_id: ctx.request.body.banuser, end_user_id: requser.name, blocked: false }).exec();
 
   // create a new block
   var f = new Follow({
-    start_user_id: ctx.body.banuser,
+    start_user_id: ctx.request.body.banuser,
     end_user_id: requser.name,
     blocked: true,
     test: false
   });
   f = await f.save();
 
-  var img = await Image.findById(ctx.body.id).exec();
+  var img = await Image.findById(ctx.request.body.id).exec();
   if (img) {
     if (!img.comments) {
       img.comments = [];
     }
     for (var c = img.comments.length - 1; c >= 0; c--) {
-      if (img.comments[c].user === ctx.body.banuser) {
+      if (img.comments[c].user === ctx.request.body.banuser) {
         img.comments.splice(c, 1);
       }
     }
@@ -339,16 +323,12 @@ async function block (ctx) {
 // pick an image
 async function pick (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
   if (requser.posted) {
     // would immediately publish, and we don't allow that
     return printError('you already posted', ctx);
   }
-  var imgcount = await Image.update({ _id: ctx.body.id, user_id: requser.name },
-    { picked: (ctx.body.makePick === 'true') }).exec();
+  var imgcount = await Image.update({ _id: ctx.request.body.id, user_id: requser.name },
+    { picked: (ctx.request.body.makePick === 'true') }).exec();
   if (!imgcount) {
     return printError('that isn\'t your image', ctx);
   }
@@ -361,39 +341,27 @@ function getHide (ctx) {
 
 async function postHide (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
-  var imgcount = await Image.update({ _id: ctx.body.id, user_id: requser.name }, { hidden: (ctx.body.makeHide === 'true') }).exec();
+  var imgcount = await Image.update({ _id: ctx.request.body.id, user_id: requser.name }, { hidden: (ctx.request.body.makeHide === 'true') }).exec();
   if (!imgcount) {
     return printError('that isn\'t your image', ctx);
   }
-  if (ctx.body.makeHide === 'true') {
+  if (ctx.request.body.makeHide === 'true') {
     ctx.redirect('/hide');
   } else {
-    ctx.redirect('/' + requser.name + '/photo/' + ctx.body.id);
+    ctx.redirect('/' + requser.name + '/photo/' + ctx.request.body.id);
   }
 }
 
 async function makedelete (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
-  await Image.remove({ _id: ctx.body.id, user_id: requser.name }).exec();
+  await Image.remove({ _id: ctx.request.body.id, user_id: requser.name }).exec();
   ctx.redirect('/hide');
 }
 
 // publish picked images
 async function publish (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
-  if (ctx.body.makePublish === 'true') {
+  if (ctx.request.body.makePublish === 'true') {
     // publish
     if (requser.posted) {
       return printError('you already posted', ctx);
@@ -427,11 +395,7 @@ async function publish (ctx) {
 // comment on photo
 async function comment (ctx) {
   var requser = (ctx.req.user || ctx.request.user);
-  if (!requser) {
-    // log in first
-    return ctx.redirect('/login');
-  }
-  var img = await Image.findById(ctx.body.id).exec();
+  var img = await Image.findById(ctx.request.body.id).exec();
   if (!img || img.hidden || !img.published) {
     return printNoExist(err, ctx);
   }
@@ -445,9 +409,9 @@ async function comment (ctx) {
     if (!img.comments) {
       img.comments = [];
     }
-    img.comments.push({ user: requser.name, text: ctx.body.text.trim() });
+    img.comments.push({ user: requser.name, text: ctx.request.body.text.trim() });
     img = await img.save();
-    ctx.redirect('/' + user.name + '/photo/' + ctx.body.id);
+    ctx.redirect('/' + user.name + '/photo/' + ctx.request.body.id);
   } else {
     return printError('you can\'t comment', ctx);
   }

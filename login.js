@@ -3,7 +3,6 @@ const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const crypto = require('crypto');
-const thunkify = require('thunkify');
 
 const User = require('./models/user.js');
 const printError = require('./common.js').error;

@@ -83,8 +83,9 @@ var setupAuth = function (app, router) {
   });
 
   function getLogin (ctx, next) {
+    var requser = (ctx.req.user || ctx.request.user);
     ctx.render('login', {
-      forUser: ctx.user,
+      forUser: requser,
       csrfToken: ctx.csrf,
       newuser: ctx.query.user,
       googly: (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET)
@@ -92,8 +93,9 @@ var setupAuth = function (app, router) {
   }
 
   function getRegister (ctx, next) {
-    if (ctx.user) {
-      return ctx.redirect('/login');
+    var requser = (ctx.req.user || ctx.request.user);
+    if (requser) {
+      return ctx.redirect('/profile');
     }
     ctx.render('register', {
       csrfToken: ctx.csrf
@@ -101,7 +103,8 @@ var setupAuth = function (app, router) {
   }
 
   function bye (ctx, next) {
-    if (ctx.user) {
+    var requser = (ctx.req.user || ctx.request.user);
+    if (requser) {
       ctx.redirect('/logout');
     } else {
       ctx.render('bye');

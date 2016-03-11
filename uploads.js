@@ -1,13 +1,12 @@
-const fs = require('fs');
-
-var middleware = require('./login.js').middleware;
-var commonResponses = require('./common');
+const middleware = require('./login.js').middleware;
+const commonResponses = require('./common');
 const Image = require('./models/image.js');
 
-module.exports = function (app, csrfProtection) {
+module.exports = function (app, router) {
 
   var upload;
   if (process.env.S3_BUCKET && process.env.AWS_SECRET_KEY && process.env.AWS_ACCESS_KEY) {
+/*
     const multer = require('multer');
     const ms3 = require('multer-s3');
 
@@ -27,10 +26,10 @@ module.exports = function (app, csrfProtection) {
     app.post('/upload', upload.single('upload'), function (req, res) {
       res.render('index');
     });
+*/
   } else if (process.env.CLOUDINARY_URL || (process.env.CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)) {
     const cloudinary = require('cloudinary');
-    const busboy = require('connect-busboy');
-    app.use(busboy());
+    const asyncBusboy = require('async-busboy')
 
     if (!process.env.CLOUDINARY_URL) {
       cloudinary.config({
@@ -40,29 +39,30 @@ module.exports = function (app, csrfProtection) {
       });
     }
 
-    app.post('/upload', csrfProtection, middleware, function (req, res) {
-      if (!req.user) {
-        return res.redirect('/login');
+    router.post('/upload', async function (ctx, next) {
+      var requser = (ctx.req.user || ctx.request.user);
+      if (!requser) {
+        return ctx.redirect('/login');
       }
-      req.pipe(req.busboy);
-      req.busboy.on('file', function (fieldname, file, filename) {
-        var stream = cloudinary.uploader.upload_stream(function(result) {
-          var i = new Image();
-          i.test = false;
-          i.user_id = req.user.name;
-          i.src = result.public_id;
-          i.published = false;
-          i.picked = false;
-          i.hidden = false;
-          i.save(function(err) {
-            if (err) {
-              return commonResponses.error(err, res);
-            }
-            res.redirect('/profile');
-          });
-        }, { public_id: Math.random() + "_" + (new Date() * 1) } );
-        file.pipe(stream);
-      });
+
+      var {files, fields} = await asyncBusboy(ctx.req);
+      if (files.length !== 1) {
+        return ctx.redirect('/profile');
+      }
+      var file = files[0];
+      await cloudinary.uploader.upload(file.path, async function(result) {
+        var i = new Image({
+          test: false,
+          user_id: requser.name,
+          src: result.public_id,
+          published: false,
+          picked: false,
+          hidden: false
+        });
+        i = await i.save();
+        return i;
+      }, { public_id: Math.random() + "_" + (new Date() * 1) } );
+      ctx.redirect('/profile');
     });
   }
 };

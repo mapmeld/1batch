@@ -90,24 +90,20 @@ async function home (ctx) {
 async function myProfile (ctx, next) {
   var requser = (ctx.req.user || ctx.request.user);
   if (!requser.name || requser.name.indexOf('@') > -1) {
-    console.log('changename');
     return ctx.redirect('/changename');
   }
   if (!requser.republish && requser.posted && (new Date() - requser.posted) > 6 * 30 * 24 * 60 * 60 * 1000) {
     // >180 days ago!
-    console.log('180 days');
     var user = await User.findById(requser._id).exec();
     user.republish = true;
     requser.republish = true;
     user = await user.save();
     return ctx.redirect('/profile');
   }
-  console.log('fetching images)');
   var allimages = await Image.find({ user_id: requser.name }).select('_id src picked published hidden').exec();
   var images = [];
   var saved = [];
   allimages.map(function(img) {
-    console.log('img fix');
     if (img.published) {
       images.push(responsiveImg(img));
     } else {
@@ -116,7 +112,6 @@ async function myProfile (ctx, next) {
   });
   if (requser.posted && !requser.republish) {
     // once user posts, end photo-picking
-    console.log('saved');
     saved = [];
   }
   saved.sort(function(a, b) {
@@ -129,7 +124,6 @@ async function myProfile (ctx, next) {
     return 0;
   });
 
-  console.log('rendering');
   ctx.render('profile', {
     user: requser,
     images: images,

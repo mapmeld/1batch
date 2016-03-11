@@ -4,12 +4,12 @@ const ago = require('time-ago')().ago;
 
 // respond with error
 function error(err, res) {
-  res.json({ status: 'error', error: err });
+  res.body = { status: 'error', error: err };
 }
 
 // respond that the resource does not exist
 function noExist(res) {
-  res.json({ status: 'missing', error: 'can\'t find that user or image' });
+  res.body = { status: 'missing', error: 'can\'t find that user or image' };
 }
 
 // break an image into multiple sizes
@@ -40,29 +40,24 @@ function responsiveImg(img, isBig) {
 }
 
 // multiple outcomes for follow-check
-function following(fromUser, toUser, res, callback) {
+async function following(fromUser, toUser, res) {
   if (fromUser && toUser) {
-    Follow.findOne({ start_user_id: fromUser.name, end_user_id: toUser.name }, function (err, f) {
-      if (err) {
-        // error occurred
-        return error(err, res);
-      }
-      if (f) {
-        if (f.blocked) {
-          // block exists: show no user or image
-          noExist(res);
-        } else {
-          // positive follow exists, continue
-          callback(true);
-        }
+    var f = await Follow.findOne({ start_user_id: fromUser.name, end_user_id: toUser.name }).exec();
+    if (f) {
+      if (f.blocked) {
+        // block exists: show no user or image
+        noExist(res);
       } else {
-        // no follow exists, continue
-        callback(false);
+        // positive follow exists, continue
+        return true;
       }
-    });
+    } else {
+      // no follow exists, continue
+      return false;
+    }
   } else {
     // not logged in, continue
-    callback(false);
+    return false;
   }
 }
 

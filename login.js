@@ -1,5 +1,5 @@
-const passport = require('passport');
-const Strategy = require('passport-local').Strategy;
+const passport = require('koa-passport');
+const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
 const crypto = require('crypto');
@@ -7,46 +7,32 @@ const crypto = require('crypto');
 const User = require('./models/user.js');
 const printError = require('./common.js').error;
 
-var middleware = function(req, res, next) {
+var middleware = function(ctx, next) {
   if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET) {
-    //passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(req, res, next);
-    next();
+    return passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' });
   } else {
-    passport.authenticate('local', function(err, user, info) {
-      req.authenticated = !! user;
-      next();
-    })(req, res, next);
+    return passport.authenticate('local', {});
   }
 };
 
-var confirmLogin = function (req, res, next) {
+var confirmLogin = function (next) {
   // this runs once, after the callback from Google
-  passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(req, res, next);
+  passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' })(next);
 };
 
-var pwdhash = function (pwd, salt, fn) {
-  var len = 128;
-  var iterations = 12000;
-  if (3 == arguments.length) {
-    crypto.pbkdf2(pwd, salt, iterations, len, function(err, hash){
-      fn(err, hash.toString('base64'));
-    });
-  } else {
-    fn = salt;
-    crypto.randomBytes(len, function(err, salt){
-      if (err) return fn(err);
-      salt = salt.toString('base64');
-      crypto.pbkdf2(pwd, salt, iterations, len, function(err, hash){
-        if (err) return fn(err);
-        fn(null, salt, hash.toString('base64'));
-      });
-    });
-  }
-};
-
-var setupAuth = function (app, csrfProtection) {
+var setupAuth = function (app, router) {
   app.use(passport.initialize());
   app.use(passport.session());
+
+  router.post('/login', passport.authenticate('local', {
+      successRedirect: '/profile?justLoggedIn=true',
+      failureRedirect: '/login'
+    }))
+    .get('/login', getLogin)
+    .post('/register', postRegister)
+    .get('/register', getRegister)
+    .get('/bye', bye)
+    .get('/logout', logout);
 
   if (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(new GoogleStrategy(
@@ -57,14 +43,15 @@ var setupAuth = function (app, csrfProtection) {
         passReqToCallback: true
       },
       function(request, accessToken, refreshToken, profile, done) {
-        User.findOne({ googid: profile.id }, function (err, user) {
+        User.findOne({ googid: profile.id }).exec(function (err, user) {
           if (!user) {
-            user = new User();
-            user.googid = profile.id;
-            user.name = profile.email;
-            user.test = false;
-            user.republish = false;
-            user.save(function() {
+            user = new User({
+              googid: profile.id,
+              name: profile.email,
+              test: false,
+              republish: false
+            });
+            user.save(function (err) {
               return done(err, user);
             });
           } else {
@@ -75,94 +62,88 @@ var setupAuth = function (app, csrfProtection) {
     ));
   }
 
-  passport.use(new Strategy(function(username, password, cb) {
-    User.findOne({ name: username.toLowerCase() }, function(err, user) {
-      if (err) { return cb(err); }
+  passport.use(new LocalStrategy(function(username, password, cb) {
+    User.findOne({ name: username.toLowerCase() }).exec(function (err, user) {
       if (!user) { return cb(null, false); }
-      pwdhash(password, user.salt, function (err, hash) {
-        if (err) { return cb(err); }
-        if (hash !== user.localpass) { return cb(null, false); }
-        return cb(null, user);
-      });
+      var len = 128;
+      var iterations = 12000;
+      var hash = crypto.pbkdf2Sync(password, user.salt, iterations, len, 'sha256');
+      hash = hash.toString('base64');
+      if (hash !== user.localpass) { return cb(null, false); }
+      return cb(null, user);
     });
   }));
 
   passport.serializeUser(function(user, done) {
-    done(null, user);
+    done(null, user._id);
   });
 
-  passport.deserializeUser(function(obj, done) {
-    done(null, obj);
+  passport.deserializeUser(function(id, done) {
+    User.findById(id, done);
   });
 
-  app.post('/login', passport.authenticate('local', { failureRedirect: '/login' }), csrfProtection, function (req, res) {
-    if (req.user.posted) {
-      res.redirect('/feed');
-    } else {
-      res.redirect('/profile');
-    }
-  });
-
-  app.get('/login', csrfProtection, function (req, res) {
-    res.render('login', {
-      forUser: req.user,
-      csrfToken: req.csrfToken(),
-      newuser: req.query.user,
+  function getLogin (ctx, next) {
+    var requser = (ctx.req.user || ctx.request.user);
+    ctx.render('login', {
+      forUser: requser,
+      csrfToken: ctx.csrf,
+      newuser: ctx.query.user,
       googly: (process.env.GOOGLE_CONSUMER_KEY && process.env.GOOGLE_CLIENT_SECRET)
     });
-  });
+  }
 
-  app.get('/register', middleware, csrfProtection, function (req, res) {
-    if (req.user) {
-      return res.redirect('/login');
+  function getRegister (ctx, next) {
+    var requser = (ctx.req.user || ctx.request.user);
+    if (requser) {
+      return ctx.redirect('/profile');
     }
-    res.render('register', {
-      csrfToken: req.csrfToken()
+    ctx.render('register', {
+      csrfToken: ctx.csrf
     });
-  });
+  }
 
-  app.get('/bye', middleware, csrfProtection, function (req, res) {
-    if (req.user) {
-      res.redirect('/logout');
+  function bye (ctx, next) {
+    var requser = (ctx.req.user || ctx.request.user);
+    if (requser) {
+      ctx.redirect('/logout');
     } else {
-      res.render('bye');
+      ctx.render('bye');
     }
-  });
+  }
 
-  app.post('/register', middleware, csrfProtection, function (req, res) {
-    User.find({ name: req.body.username.toLowerCase() }, function (err, users) {
-      if (err) {
-        return printError(res, err);
-      }
-      if (users.length) {
-        return printError(res, 'user with that name already exists');
-      }
-      pwdhash(req.body.password, function (err, salt, hash) {
-        if (err) {
-          return printError(res, err);
-        }
-        var u = new User();
-        u.name = req.body.username.toLowerCase();
-        u.localpass = hash;
-        u.salt = salt;
-        u.test = false;
-        u.republish = false;
-        u.save(function (err) {
-          if (err) {
-            return printError(err, res);
-          }
-          res.redirect('/login?user=' + u.name);
-        });
-      });
+  async function postRegister (ctx, next) {
+    var username = ctx.request.body.username.trim().toLowerCase();
+    var pwd = ctx.request.body.password;
+    var users = await User.find({ name: username }).exec();
+    if (users.length) {
+      return printError(ctx, 'user with that name already exists');
+    }
+
+    var len = 128;
+    var iterations = 12000;
+    var salt, hash;
+    salt = await crypto.randomBytes(len);
+    salt = salt.toString('base64');
+    hash = crypto.pbkdf2Sync(pwd, salt, iterations, len, 'sha256');
+    hash = hash.toString('base64');
+
+    var u = new User({
+      name: username,
+      localpass: hash,
+      salt: salt,
+      test: false,
+      republish: false
     });
-  });
+    u = await u.save();
+    ctx.redirect('/login?user=' + username);
+  }
 
-  app.get('/logout', middleware, csrfProtection, function (req, res) {
-    req.logout();
-    res.redirect('/bye');
-  });
+  function logout (ctx, next) {
+    ctx.logout();
+    ctx.redirect('/bye');
+  }
 
-  app.get('/auth/google', passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' }));
+  //app.get('/auth/google', passport.authenticate('google', { scope: ['email'], failureRedirect: '/login' }));
 };
 
 module.exports = {

@@ -42,7 +42,7 @@ describe('photo page', function() {
             return wrapup(done, err);
           }
           requestImage('test', img._id, done, function(res) {
-            assert.include(res.text, 'http://example.com');
+            assert.include(res.text, '//example.com');
             wrapup(done);
           });
         });

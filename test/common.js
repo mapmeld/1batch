@@ -1,9 +1,19 @@
 
-const request = require('supertest');
 
 const User = require('../models/user.js');
 const Image = require('../models/image.js');
 const app = require('../app.js');
+const request = require('supertest').agent(app.listen());
+
+function wrapup(done, err) {
+  User.remove({ test: true }, function() {
+    Image.remove({ test: true }, function() {
+      if (done) {
+        done(err);
+      }
+    });
+  });
+}
 
 module.exports = {
 
@@ -31,8 +41,7 @@ module.exports = {
   },
 
   requestProfile: function(username, done, callback) {
-    request(app)
-      .get('/profile/' + username)
+    request.get('/profile/' + username)
       .expect(200)
       .end(function(err, res) {
         if (err) {
@@ -43,8 +52,7 @@ module.exports = {
   },
 
   requestImage: function(username, imgid, done, callback) {
-    request(app)
-      .get('/' + username + '/photo/' + imgid)
+    request.get('/' + username + '/photo/' + imgid)
       .expect(200)
       .end(function(err, res) {
         if (err) {
@@ -54,13 +62,5 @@ module.exports = {
       });
   },
 
-  wrapup: function(done, err) {
-    User.remove({ test: true }, function() {
-      Image.remove({ test: true }, function() {
-        if (done) {
-          done(err);
-        }
-      });
-    });
-  }
+  wrapup: wrapup
 };

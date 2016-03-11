@@ -4,12 +4,12 @@ const ago = require('time-ago')().ago;
 
 // respond with error
 function error(err, res) {
-  res.json({ status: 'error', error: err });
+  res.body = { status: 'error', error: err };
 }
 
 // respond that the resource does not exist
 function noExist(res) {
-  res.json({ status: 'missing', error: 'can\'t find that user or image' });
+  res.body = { status: 'missing', error: 'can\'t find that user or image' };
 }
 
 // break an image into multiple sizes

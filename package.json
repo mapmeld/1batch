@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "nodemon --exec npm run -s serve",
     "serve": "babel-node -- app.js",
-    "start": "node app.js",
-    "test": "eslint *.js && eslint */*.js && flow && mocha"
+    "test": "eslint *.js && eslint */*.js && flow && mocha --compilers js:babel-core/register"
   },
   "repository": {
     "type": "git",

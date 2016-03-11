@@ -143,6 +143,7 @@ async function myProfile (ctx, next) {
 }
 
 function changeName (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     return ctx.redirect('/login');
   }
@@ -156,6 +157,7 @@ function changeName (ctx) {
 }
 
 async function postChangeName (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     return ctx.redirect('/login');
   }
@@ -168,7 +170,7 @@ async function postChangeName (ctx) {
   }
   var users = await User.find({ name: newname }).exec();
   if (users.length) {
-    return printError(res, 'someone already has that username');
+    return printError(ctx, 'someone already has that username');
   }
   var user = await User.findById(requser._id).exec();
   requser.name = newname;
@@ -179,6 +181,7 @@ async function postChangeName (ctx) {
 
 // friends' photos
 async function feed (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (requser) {
     var follows = await Follow.find({ start_user_id: requser.name, blocked: false }).exec();
     var permDate = new Date((new Date()) - 60 * 60 * 1000);
@@ -196,12 +199,13 @@ async function feed (ctx) {
 
 // someone else's profile
 async function theirProfile (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (requser && ctx.params.username.toLowerCase() === requser.name) {
     // redirect to your own profile
     return ctx.redirect('/profile');
   }
   if (ctx.params.username.indexOf('@') > -1) {
-    return printNoExist(res);
+    return printNoExist(ctx);
   }
   var user = await User.findOne({ name: ctx.params.username.toLowerCase() }, '_id name posted').exec();
   if (!user) {
@@ -224,23 +228,24 @@ async function theirProfile (ctx) {
 
 // view a published image
 async function photo (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   var user = await User.findOne({ name: ctx.params.username.toLowerCase() }).exec();
   if (!user || !user.posted) {
-    return printNoExist(res);
+    return printNoExist(ctx);
   }
 
-  var userFollowsSource = await following(requser, user, res);
-  var sourceFollowsUser = await following(user, requser, res);
+  var userFollowsSource = await following(requser, user, ctx);
+  var sourceFollowsUser = await following(user, requser, ctx);
   var image = await Image.findOne({ _id: ctx.params.photoid }, '_id src comments caption hidden published').exec();
   if (!image) {
-    return printNoExist(res);
+    return printNoExist(ctx);
   }
   if (!requser || requser.name !== user.name) {
     if (image.hidden || !image.published) {
-      return printNoExist(res);
+      return printNoExist(ctx);
     }
   }
-  comments = image.comments || [];
+  var comments = image.comments || [];
   image = responsiveImg(image, true);
   ctx.render('image', {
     user: user,
@@ -256,21 +261,22 @@ async function photo (ctx) {
 
 // follow another user
 async function follow (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
   if (requser.name === ctx.params.end_user) {
-    return printError('you can\'t follow yourself', res);
+    return printError('you can\'t follow yourself', ctx);
   }
   if (ctx.params.end_user.indexOf('@') > -1) {
-    return printNoExist(res);
+    return printNoExist(ctx);
   }
   var existing = await Follow.findOne({ start_user_id: requser.name, end_user_id: ctx.params.end_user }).exec();
   if (ctx.body.makeFollow === 'true') {
     if (existing) {
       // follow already exists
-      return printError('you already follow', res);
+      return printError('you already follow', ctx);
     }
 
     var f = new Follow({
@@ -280,24 +286,25 @@ async function follow (ctx) {
       test: false
     });
     f = await f.save();
-    ctx.json({ status: 'success' });
+    ctx.body = { status: 'success' };
   } else {
     if (!existing) {
-      return printError('you already don\'t follow', res);
+      return printError('you already don\'t follow', ctx);
     }
     await Follow.remove({ start_user_id: requser.name, end_user_id: ctx.params.end_user, blocked: false }).exec();
-    ctx.json({ status: 'success' });
+    ctx.body = { status: 'success' };
   }
 }
 
 // block another user
 async function block (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
   if (requser.name === ctx.body.banuser) {
-    return printError('you can\'t block yourself', res);
+    return printError('you can\'t block yourself', ctx);
   }
   // remove a follow in either direction
   await Follow.remove({ start_user_id: requser.name, end_user_id: ctx.body.banuser, blocked: false }).exec();
@@ -314,6 +321,9 @@ async function block (ctx) {
 
   var img = await Image.findById(ctx.body.id).exec();
   if (img) {
+    if (!img.comments) {
+      img.comments = [];
+    }
     for (var c = img.comments.length - 1; c >= 0; c--) {
       if (img.comments[c].user === ctx.body.banuser) {
         img.comments.splice(c, 1);
@@ -328,20 +338,21 @@ async function block (ctx) {
 
 // pick an image
 async function pick (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
   if (requser.posted) {
     // would immediately publish, and we don't allow that
-    return printError('you already posted', res);
+    return printError('you already posted', ctx);
   }
   var imgcount = await Image.update({ _id: ctx.body.id, user_id: requser.name },
     { picked: (ctx.body.makePick === 'true') }).exec();
   if (!imgcount) {
-    return printError('that isn\'t your image', res);
+    return printError('that isn\'t your image', ctx);
   }
-  ctx.json({ status: 'success' });
+  ctx.body = { status: 'success' };
 }
 
 function getHide (ctx) {
@@ -349,13 +360,14 @@ function getHide (ctx) {
 }
 
 async function postHide (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
   var imgcount = await Image.update({ _id: ctx.body.id, user_id: requser.name }, { hidden: (ctx.body.makeHide === 'true') }).exec();
   if (!imgcount) {
-    return printError('that isn\'t your image', res);
+    return printError('that isn\'t your image', ctx);
   }
   if (ctx.body.makeHide === 'true') {
     ctx.redirect('/hide');
@@ -365,6 +377,7 @@ async function postHide (ctx) {
 }
 
 async function makedelete (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
@@ -375,6 +388,7 @@ async function makedelete (ctx) {
 
 // publish picked images
 async function publish (ctx) {
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
@@ -382,51 +396,51 @@ async function publish (ctx) {
   if (ctx.body.makePublish === 'true') {
     // publish
     if (requser.posted) {
-      return printError('you already posted', res);
+      return printError('you already posted', ctx);
     }
     var count = await Image.count({ user_id: requser.name, picked: true, hidden: false }).exec();
     if (!count) {
-      return printError('you have no picked images', res);
+      return printError('you have no picked images', ctx);
     }
     if (count > 8) {
-      return printError('you have too many picked images', res);
+      return printError('you have too many picked images', ctx);
     }
     await User.update({ name: requser.name }, { posted: (new Date()) }).exec();
     requser.posted = new Date();
     await Image.update({ user_id: requser.name, picked: true, hidden: false }, { published: true }, { multi: true });
-    ctx.json({ status: 'success' });
+    ctx.body = { status: 'success' };
   } else {
     // un-publish within 60 minutes
     if (!requser.posted) {
-      return printError('you have not posted', res);
+      return printError('you have not posted', ctx);
     }
     if ((new Date()) - requser.posted > 60 * 60 * 1000) {
-      return printError('too much time has passed. you can remove images but not re-publish', res);
+      return printError('too much time has passed. you can remove images but not re-publish', ctx);
     }
     await User.update({ name: requser.name }, { posted: null }).exec();
     requser.posted = null;
     await Image.update({ user_id: requser.name }, { published: false }, { multi: true });
-    ctx.json({ status: 'success' });
+    ctx.body = { status: 'success' };
   }
 }
 
 // comment on photo
 async function comment (ctx) {
-  var requser = ctx.request.user;
+  var requser = (ctx.req.user || ctx.request.user);
   if (!requser) {
     // log in first
     return ctx.redirect('/login');
   }
   var img = await Image.findById(ctx.body.id).exec();
   if (!img || img.hidden || !img.published) {
-    return printNoExist(err, res);
+    return printNoExist(err, ctx);
   }
   var user = await User.findOne({ name: img.user_id }).exec();
   if (!user) {
-    return printNoExist(err, res);
+    return printNoExist(err, ctx);
   }
-  var userFollowsSource = await following(requser, user, res);
-  var sourceFollowsUser = await following(user, requser, res);
+  var userFollowsSource = await following(requser, user, ctx);
+  var sourceFollowsUser = await following(user, requser, ctx);
   if ((requser.name === user.name) || userFollowsSource || sourceFollowsUser) {
     if (!img.comments) {
       img.comments = [];
@@ -435,7 +449,7 @@ async function comment (ctx) {
     img = await img.save();
     ctx.redirect('/' + user.name + '/photo/' + ctx.body.id);
   } else {
-    return printError('you can\'t comment', res);
+    return printError('you can\'t comment', ctx);
   }
 }
 

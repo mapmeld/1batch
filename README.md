@@ -1,5 +1,7 @@
 # 1batch
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mapmeld/1batch.svg)](https://greenkeeper.io/)
+
 ## 1batch concept
 
 You upload photos and select one batch of up to 8 photos to publish your profile.

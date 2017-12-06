@@ -1,6 +1,6 @@
 const cloudinary = require('cloudinary');
 const Follow = require('./models/following.js');
-const ago = require('time-ago')().ago;
+const ago = require('time-ago').ago;
 
 // respond with error
 function error(err, res) {

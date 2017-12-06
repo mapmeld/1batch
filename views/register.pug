@@ -1,4 +1,4 @@
-extends ./layout.jade
+extends ./layout.pug
 
 block content
   .row
@@ -27,7 +27,7 @@ block content
           label Password
           input(type="password", name="password")
           br
-          input(type="hidden", name="_csrf", value="#{csrfToken}")
+          input(type="hidden", name="_csrf", value=csrfToken)
           button.btn.btn-success Register New User
         .well
           span Already have an account?&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

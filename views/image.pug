@@ -1,4 +1,4 @@
-extends ./layout.jade
+extends ./layout.pug
 
 block content
   input.csrf(type="hidden", value=csrfToken)
@@ -16,7 +16,7 @@ block content
   .row
     .col-sm-12.col-md-6
       h1
-        a(href="/profile/#{user.name}") #{user.name}
+        a(href="/profile/" + user.name) #{user.name}
       h4 posted #{posted}
       if forUser
         if forUser.name !== user.name
@@ -33,14 +33,14 @@ block content
     .row
       .col-sm-6
         form.inline(action="/hide", method="POST")
-          input(type="hidden", name="_csrf", value="#{csrfToken}")
-          input(type="hidden", name="id", value="#{image._id}")
+          input(type="hidden", name="_csrf", value=csrfToken)
+          input(type="hidden", name="id", value=image._id)
           input(type="hidden", name="makeHide", value="false")
           button.btn.btn-success Unhide
       .col-sm-6
         form.inline(action="/delete", method="POST")
-          input(type="hidden", name="_csrf", value="#{csrfToken}")
-          input(type="hidden", name="id", value="#{image._id}")
+          input(type="hidden", name="_csrf", value=csrfToken)
+          input(type="hidden", name="id", value=image._id)
           button.btn.btn-danger Completely Delete
           br
           br
@@ -48,7 +48,7 @@ block content
   .row
     .col-sm-12.bigimagecontainer
       hr
-      img.bigimage(src=image.src.main, srcset="#{image.src.main} 1x, #{image.src.retina} 2x")
+      img.bigimage(src=image.src.main, srcset=image.src.main + " 1x, " + image.src.retina + " 2x")
 
   if forUser
     if forUser.name == user.name
@@ -56,8 +56,8 @@ block content
         .col-sm-6
           if !image.hidden
             form.inline(action="/hide", method="POST")
-              input(type="hidden", name="_csrf", value="#{csrfToken}")
-              input(type="hidden", name="id", value="#{image._id}")
+              input(type="hidden", name="_csrf", value=csrfToken)
+              input(type="hidden", name="id", value=image._id)
               input(type="hidden", name="makeHide", value="true")
               button.btn.btn-warning Hide / Remove
               br
@@ -67,8 +67,8 @@ block content
       .row
         .col-sm-6
           form.well(action="/comment", method="POST")
-            input(type="hidden", name="_csrf", value="#{csrfToken}")
-            input(type="hidden", name="id", value="#{image._id}")
+            input(type="hidden", name="_csrf", value=csrfToken)
+            input(type="hidden", name="id", value=image._id)
             textarea.form-control(name="text")
             button.btn.btn-primary.pull-right.commenter Post
             .clearfix
@@ -80,22 +80,22 @@ block content
           tr
             if comment.user === user.name
               th
-                a(href="/profile/#{comment.user}")
+                a(href="/profile/" + comment.user)
                   span= comment.user
                   span &nbsp(poster)
               td
                 strong= comment.text
             else
               td
-                a(href="/profile/#{comment.user}")= comment.user
+                a(href="/profile/" + comment.user)= comment.user
               td
                 p= comment.text
                 if forUser && forUser.name === user.name
                   td
                     form.inline.pull-right(action="/block", method="POST")
-                      input(type="hidden", name="_csrf", value="#{csrfToken}")
-                      input(type="hidden", name="banuser", value="#{comment.user}")
-                      input(type="hidden", name="id", value="#{image._id}")
+                      input(type="hidden", name="_csrf", value=csrfToken)
+                      input(type="hidden", name="banuser", value=comment.user)
+                      input(type="hidden", name="id", value=image._id)
                       button.btn.btn-danger.btn-xs Block
 
 block scripts

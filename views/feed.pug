@@ -1,4 +1,4 @@
-extends ./layout.jade
+extends ./layout.pug
 
 block content
   .row
@@ -20,7 +20,7 @@ block content
         ul
           for follow in follows
             li
-              a(href="/profile/#{follow.end_user_id}")= follow.end_user_id
+              a(href="/profile/" + follow.end_user_id)= follow.end_user_id
       else
         h3 You don't follow any users.
 
@@ -31,4 +31,4 @@ block content
         ul
           for publisher in publishers
             li
-              a(href="/profile/#{publisher}") #{publisher}
+              a(href="/profile/" + publisher) #{publisher}
